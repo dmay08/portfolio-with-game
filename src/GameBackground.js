@@ -27,6 +27,8 @@ const GameBackground = () => {
             let buttonSize = 60;
             let isGameOver = false;
             let gameOverTimer = 0;
+            let playerHitEffect = 0;
+            let explosions = [];
 
             p.setup = () => {
                 p.createCanvas(p.windowWidth, p.windowHeight).parent(sketchRef.current);
@@ -62,6 +64,8 @@ const GameBackground = () => {
                 isGameOver = false;
                 playerBullets = [];
                 enemyBullets = [];
+                explosions = [];
+                playerHitEffect = 0;
                 spawnEnemies();
             }
 
@@ -81,6 +85,8 @@ const GameBackground = () => {
                     handleInput();
                     updateGame();
                 }
+                
+                drawExplosions();
             };
             
             function drawGameOver() {
@@ -116,8 +122,23 @@ const GameBackground = () => {
             }
 
             function drawPlayer() {
-                // Main body - monochrome color scheme
+                // Skip drawing player if in hit animation and blinking
+                if (playerHitEffect > 0 && Math.floor(playerHitEffect / 5) % 2 === 0) {
+                    playerHitEffect--;
+                    return;
+                }
+                
+                if (playerHitEffect > 0) {
+                    playerHitEffect--;
+                }
+                
                 p.noStroke();
+                
+                // Hit effect - red glow when player is hit
+                if (playerHitEffect > 0) {
+                    p.fill(255, 0, 0, 100);
+                    p.ellipse(playerX, playerY + playerHeight/2, playerWidth * 1.5, playerHeight * 1.5);
+                }
                 
                 // Thruster glow effect (animated)
                 p.fill(255, 0, 255, 100 + p.sin(p.frameCount * 0.2) * 50); // Neon pink
@@ -341,8 +362,26 @@ const GameBackground = () => {
                         let enemyBB = { left: enemy.x - enemy.size / 2, right: enemy.x + enemy.size / 2, top: enemy.y, bottom: enemy.y + enemy.size / 2 };
                         if (rectanglesOverlap(bulletBB, enemyBB)) {
                             playerBullets.splice(i, 1);
+                            
+                            // Create explosion at impact point
+                            explosions.push({
+                                x: bullet.x,
+                                y: bullet.y,
+                                size: 30,
+                                frame: 0
+                            });
+                            
                             enemies.splice(j, 1);
                             score += 10;
+                            
+                            // Create larger explosion for enemy death
+                            explosions.push({
+                                x: enemy.x,
+                                y: enemy.y,
+                                size: 60,
+                                frame: 0
+                            });
+                            
                             break;
                         }
                     }
@@ -353,8 +392,30 @@ const GameBackground = () => {
                     let bulletBB = { left: bullet.x - 1, right: bullet.x + 1, top: bullet.y - 5, bottom: bullet.y + 5 };
                     if (rectanglesOverlap(bulletBB, playerBB)) {
                         enemyBullets.splice(i, 1);
+                        
+                        // Create hit explosion
+                        explosions.push({
+                            x: bullet.x,
+                            y: bullet.y,
+                            size: 40,
+                            frame: 0
+                        });
+                        
+                        // Player hit effect
+                        playerHitEffect = 30;
+                        
                         lives--;
                         if (lives <= 0) {
+                            // Create big explosion for player death
+                            for (let i = 0; i < 5; i++) {
+                                explosions.push({
+                                    x: playerX + p.random(-playerWidth, playerWidth),
+                                    y: playerY + p.random(-playerHeight, playerHeight),
+                                    size: 70 + p.random(20),
+                                    frame: p.random(5)
+                                });
+                            }
+                            
                             isGameOver = true;
                         }
                     }
@@ -366,6 +427,35 @@ const GameBackground = () => {
 
             function rectanglesOverlap(r1, r2) {
                 return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+            }
+
+            function drawExplosions() {
+                for (let i = explosions.length - 1; i >= 0; i--) {
+                    let exp = explosions[i];
+                    
+                    // Draw explosion
+                    p.noStroke();
+                    
+                    // Outer glow
+                    p.fill(255, 100, 0, 150 - exp.frame * 2);
+                    p.ellipse(exp.x, exp.y, exp.size * (1 + exp.frame/10), exp.size * (1 + exp.frame/10));
+                    
+                    // Inner bright part
+                    p.fill(255, 200, 0, 200 - exp.frame * 3);
+                    p.ellipse(exp.x, exp.y, exp.size * (0.7 + exp.frame/15), exp.size * (0.7 + exp.frame/15));
+                    
+                    // Core
+                    p.fill(255);
+                    p.ellipse(exp.x, exp.y, exp.size * (0.3 + exp.frame/30), exp.size * (0.3 + exp.frame/30));
+                    
+                    // Update explosion frame
+                    exp.frame++;
+                    
+                    // Remove old explosions
+                    if (exp.frame > 30) {
+                        explosions.splice(i, 1);
+                    }
+                }
             }
 
             p.windowResized = () => {
