@@ -1,0 +1,230 @@
+import React, { useRef, useEffect } from 'react';
+
+const GameBackground = () => {
+    const sketchRef = useRef(null);
+
+    useEffect(() => {
+        // Make sure p5 is available globally
+        const p5 = window.p5;
+        if (!p5) {
+            console.error('p5.js is not loaded');
+            return;
+        }
+
+        const sketch = (p) => {
+            let stars = [];
+            let playerX, playerY;
+            let playerWidth = 20;
+            let playerHeight = 30;
+            let enemies = [];
+            let playerBullets = [];
+            let enemyBullets = [];
+            let lives = 3;
+            let score = 0;
+            let shootCooldown = 0;
+            let enemyDirection = 1;
+            let enemySpeed = 2;
+            let buttonSize = 50;
+
+            p.setup = () => {
+                p.createCanvas(p.windowWidth, p.windowHeight).parent(sketchRef.current);
+                playerX = p.width / 2;
+                playerY = p.height - buttonSize - 20 - playerHeight;
+                for (let i = 0; i < 100; i++) {
+                    stars.push({
+                        x: p.random(p.width),
+                        y: p.random(p.height),
+                        speedY: p.random(1, 3),
+                        size: p.random(1, 3),
+                    });
+                }
+                spawnEnemies();
+            };
+
+            function spawnEnemies() {
+                enemies = [];
+                for (let i = 0; i < 3; i++) {
+                    enemies.push({
+                        x: p.width / 2 - 50 + i * 50,
+                        y: 50,
+                        size: 20,
+                        shootTimer: p.floor(p.random(60, 120)),
+                    });
+                }
+            }
+
+            p.draw = () => {
+                p.background(0);
+                drawStars();
+                drawPlayer();
+                drawEnemies();
+                drawPlayerBullets();
+                drawEnemyBullets();
+                drawUI();
+                drawButtons();
+                handleInput();
+                updateGame();
+            };
+
+            function drawStars() {
+                for (let star of stars) {
+                    p.fill(255);
+                    p.noStroke();
+                    p.ellipse(star.x, star.y, star.size, star.size);
+                    star.y += star.speedY;
+                    if (star.y > p.height) {
+                        star.y = 0;
+                        star.x = p.random(p.width);
+                    }
+                }
+            }
+
+            function drawPlayer() {
+                p.fill(255);
+                p.noStroke();
+                p.rect(playerX - playerWidth / 2, playerY, playerWidth, playerHeight);
+                p.fill(255, 0, 0);
+                p.triangle(playerX - playerWidth / 2, playerY, playerX + playerWidth / 2, playerY, playerX, playerY - 15);
+                p.fill(255, 165, 0);
+                p.triangle(playerX - 5, playerY + playerHeight, playerX + 5, playerY + playerHeight, playerX, playerY + playerHeight + 5);
+            }
+
+            function drawEnemies() {
+                p.fill(255, 165, 0);
+                p.noStroke();
+                for (let enemy of enemies) {
+                    p.triangle(enemy.x, enemy.y, enemy.x - enemy.size / 2, enemy.y + enemy.size / 2, enemy.x + enemy.size / 2, enemy.y + enemy.size / 2);
+                }
+            }
+
+            function drawPlayerBullets() {
+                p.fill(255);
+                p.noStroke();
+                for (let bullet of playerBullets) {
+                    p.rect(bullet.x - 1, bullet.y - 5, 2, 10);
+                }
+            }
+
+            function drawEnemyBullets() {
+                p.fill(255, 0, 0);
+                p.noStroke();
+                for (let bullet of enemyBullets) {
+                    p.rect(bullet.x - 1, bullet.y - 5, 2, 10);
+                }
+            }
+
+            function drawUI() {
+                p.fill(255);
+                p.textSize(16);
+                p.textAlign(p.LEFT);
+                p.text("Score: " + score, 10, 20);
+                p.text("Lives: " + lives, 10, 40);
+            }
+
+            function drawButtons() {
+                p.fill(100, 100, 100, 150);
+                p.noStroke();
+                p.rect(0, p.height - buttonSize, buttonSize, buttonSize);
+                p.rect(p.width - buttonSize, p.height - buttonSize, buttonSize, buttonSize);
+                p.rect(p.width / 2 - buttonSize / 2, p.height - buttonSize, buttonSize, buttonSize);
+                p.fill(255);
+                p.textAlign(p.CENTER, p.CENTER);
+                p.textSize(16);
+                p.text("Left", buttonSize / 2, p.height - buttonSize / 2);
+                p.text("Right", p.width - buttonSize / 2, p.height - buttonSize / 2);
+                p.text("Shoot", p.width / 2, p.height - buttonSize / 2);
+            }
+
+            function handleInput() {
+                let moveLeft = p.keyIsDown(p.LEFT_ARROW) || (p.mouseIsPressed && p.mouseX < buttonSize && p.mouseY > p.height - buttonSize);
+                let moveRight = p.keyIsDown(p.RIGHT_ARROW) || (p.mouseIsPressed && p.mouseX > p.width - buttonSize && p.mouseY > p.height - buttonSize);
+                let shoot = p.keyIsDown(32) || (p.mouseIsPressed && p.mouseX > p.width / 2 - buttonSize / 2 && p.mouseX < p.width / 2 + buttonSize / 2 && p.mouseY > p.height - buttonSize);
+                if (moveLeft) playerX -= 5;
+                if (moveRight) playerX += 5;
+                playerX = p.constrain(playerX, playerWidth / 2, p.width - playerWidth / 2);
+                if (shoot && shootCooldown <= 0) {
+                    playerBullets.push({ x: playerX, y: playerY - 15, speed: -10 });
+                    shootCooldown = 10;
+                }
+                if (shootCooldown > 0) shootCooldown--;
+            }
+
+            function updateGame() {
+                for (let bullet of playerBullets) {
+                    bullet.y += bullet.speed;
+                }
+                playerBullets = playerBullets.filter(b => b.y > -10);
+                for (let bullet of enemyBullets) {
+                    bullet.y += bullet.speed;
+                }
+                enemyBullets = enemyBullets.filter(b => b.y < p.height + 10);
+                let shouldReverse = false;
+                for (let enemy of enemies) {
+                    enemy.x += enemyDirection * enemySpeed;
+                    if (enemy.x - enemy.size / 2 < 0 || enemy.x + enemy.size / 2 > p.width) {
+                        shouldReverse = true;
+                    }
+                    if (enemy.shootTimer > 0) {
+                        enemy.shootTimer--;
+                    } else {
+                        enemyBullets.push({ x: enemy.x, y: enemy.y + enemy.size / 2, speed: 5 });
+                        enemy.shootTimer = p.floor(p.random(60, 120));
+                    }
+                }
+                if (shouldReverse) {
+                    enemyDirection *= -1;
+                }
+                for (let i = playerBullets.length - 1; i >= 0; i--) {
+                    let bullet = playerBullets[i];
+                    let bulletBB = { left: bullet.x - 1, right: bullet.x + 1, top: bullet.y - 5, bottom: bullet.y + 5 };
+                    for (let j = enemies.length - 1; j >= 0; j--) {
+                        let enemy = enemies[j];
+                        let enemyBB = { left: enemy.x - enemy.size / 2, right: enemy.x + enemy.size / 2, top: enemy.y, bottom: enemy.y + enemy.size / 2 };
+                        if (rectanglesOverlap(bulletBB, enemyBB)) {
+                            playerBullets.splice(i, 1);
+                            enemies.splice(j, 1);
+                            score += 10;
+                            break;
+                        }
+                    }
+                }
+                let playerBB = { left: playerX - playerWidth / 2, right: playerX + playerWidth / 2, top: playerY - 15, bottom: playerY + playerHeight + 5 };
+                for (let i = enemyBullets.length - 1; i >= 0; i--) {
+                    let bullet = enemyBullets[i];
+                    let bulletBB = { left: bullet.x - 1, right: bullet.x + 1, top: bullet.y - 5, bottom: bullet.y + 5 };
+                    if (rectanglesOverlap(bulletBB, playerBB)) {
+                        enemyBullets.splice(i, 1);
+                        lives--;
+                        if (lives <= 0) {
+                            lives = 3;
+                            score = 0;
+                            spawnEnemies();
+                        }
+                    }
+                }
+                if (enemies.length === 0) {
+                    spawnEnemies();
+                }
+            }
+
+            function rectanglesOverlap(r1, r2) {
+                return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+            }
+
+            p.windowResized = () => {
+                p.resizeCanvas(p.windowWidth, p.windowHeight);
+                playerX = p.width / 2;
+                playerY = p.height - buttonSize - 20 - playerHeight;
+            };
+        };
+
+        const p5Instance = new window.p5(sketch);
+        return () => {
+            p5Instance.remove();
+        };
+    }, []);
+
+    return <div ref={sketchRef} className="absolute inset-0 z-0" />;
+};
+
+export default GameBackground;
