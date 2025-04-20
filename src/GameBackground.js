@@ -14,8 +14,8 @@ const GameBackground = () => {
         const sketch = (p) => {
             let stars = [];
             let playerX, playerY;
-            let playerWidth = 20;
-            let playerHeight = 30;
+            let playerWidth = 40;
+            let playerHeight = 60;
             let enemies = [];
             let playerBullets = [];
             let enemyBullets = [];
@@ -24,7 +24,7 @@ const GameBackground = () => {
             let shootCooldown = 0;
             let enemyDirection = 1;
             let enemySpeed = 2;
-            let buttonSize = 50;
+            let buttonSize = 60;
 
             p.setup = () => {
                 p.createCanvas(p.windowWidth, p.windowHeight).parent(sketchRef.current);
@@ -45,10 +45,11 @@ const GameBackground = () => {
                 enemies = [];
                 for (let i = 0; i < 3; i++) {
                     enemies.push({
-                        x: p.width / 2 - 50 + i * 50,
-                        y: 50,
-                        size: 20,
+                        x: p.width / 2 - 100 + i * 100,
+                        y: 80,
+                        size: 40,
                         shootTimer: p.floor(p.random(60, 120)),
+                        type: p.floor(p.random(3))
                     });
                 }
             }
@@ -80,36 +81,155 @@ const GameBackground = () => {
             }
 
             function drawPlayer() {
-                p.fill(255);
+                // Main body - monochrome color scheme
                 p.noStroke();
-                p.rect(playerX - playerWidth / 2, playerY, playerWidth, playerHeight);
-                p.fill(255, 0, 0);
-                p.triangle(playerX - playerWidth / 2, playerY, playerX + playerWidth / 2, playerY, playerX, playerY - 15);
-                p.fill(255, 165, 0);
-                p.triangle(playerX - 5, playerY + playerHeight, playerX + 5, playerY + playerHeight, playerX, playerY + playerHeight + 5);
+                
+                // Thruster glow effect (animated)
+                p.fill(255, 0, 255, 100 + p.sin(p.frameCount * 0.2) * 50); // Neon pink
+                p.ellipse(playerX, playerY + playerHeight + 15, 30 + p.sin(p.frameCount * 0.3) * 10, 20);
+                
+                // Main body
+                p.fill(220); // Light grey
+                p.ellipse(playerX, playerY + playerHeight/2, playerWidth * 0.9, playerHeight * 1.1);
+                
+                // Cockpit
+                p.fill(50); // Dark grey
+                p.ellipse(playerX, playerY + playerHeight/3, playerWidth/2, playerHeight/4);
+                
+                // Wings
+                p.fill(180); // Medium grey
+                // Left wing
+                p.beginShape();
+                p.vertex(playerX - playerWidth/4, playerY + playerHeight/2);
+                p.vertex(playerX - playerWidth*1.2, playerY + playerHeight*0.7);
+                p.vertex(playerX - playerWidth/2, playerY + playerHeight*0.9);
+                p.endShape(p.CLOSE);
+                // Right wing
+                p.beginShape();
+                p.vertex(playerX + playerWidth/4, playerY + playerHeight/2);
+                p.vertex(playerX + playerWidth*1.2, playerY + playerHeight*0.7);
+                p.vertex(playerX + playerWidth/2, playerY + playerHeight*0.9);
+                p.endShape(p.CLOSE);
+                
+                // Engine area
+                p.fill(30); // Very dark grey
+                p.rect(playerX - playerWidth/5, playerY + playerHeight*0.7, playerWidth*0.4, playerHeight*0.3, 5);
+                
+                // Details
+                p.fill(255); // White highlights
+                p.rect(playerX - playerWidth/8, playerY + playerHeight/10, playerWidth/4, playerHeight/20, 2);
+                p.rect(playerX - playerWidth/8 + playerWidth/4 + playerWidth/20, playerY + playerHeight/10, playerWidth/4, playerHeight/20, 2);
+                
+                // Top fin
+                p.fill(100); // Grey
+                p.triangle(
+                    playerX, playerY + playerHeight/6,
+                    playerX - playerWidth/10, playerY + playerHeight/2,
+                    playerX + playerWidth/10, playerY + playerHeight/2
+                );
             }
 
             function drawEnemies() {
-                p.fill(255, 165, 0);
-                p.noStroke();
                 for (let enemy of enemies) {
-                    p.triangle(enemy.x, enemy.y, enemy.x - enemy.size / 2, enemy.y + enemy.size / 2, enemy.x + enemy.size / 2, enemy.y + enemy.size / 2);
+                    // Base shape for all enemies
+                    p.noStroke();
+                    
+                    // Enemy type variations
+                    if (enemy.type === 0) {
+                        // Type 1: Saucer with dome
+                        // Glow effect
+                        p.fill(255, 0, 255, 80); // Neon pink glow
+                        p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 2, enemy.size);
+                        
+                        // Main body
+                        p.fill(70);
+                        p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 1.8, enemy.size * 0.7);
+                        
+                        // Dome
+                        p.fill(200);
+                        p.ellipse(enemy.x, enemy.y, enemy.size * 0.9, enemy.size * 0.6);
+                        
+                        // Center light
+                        p.fill(255, 0, 255); // Neon pink
+                        p.ellipse(enemy.x, enemy.y, enemy.size * 0.3, enemy.size * 0.3);
+                        
+                    } else if (enemy.type === 1) {
+                        // Type 2: Angular fighter
+                        // Glow effect
+                        p.fill(170, 0, 255, 80); // Neon purple glow
+                        p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 2, enemy.size);
+                        
+                        // Main body
+                        p.fill(50);
+                        p.beginShape();
+                        p.vertex(enemy.x, enemy.y - enemy.size/2);
+                        p.vertex(enemy.x + enemy.size, enemy.y + enemy.size/2);
+                        p.vertex(enemy.x, enemy.y + enemy.size);
+                        p.vertex(enemy.x - enemy.size, enemy.y + enemy.size/2);
+                        p.endShape(p.CLOSE);
+                        
+                        // Center
+                        p.fill(150);
+                        p.ellipse(enemy.x, enemy.y + enemy.size/3, enemy.size * 0.6, enemy.size * 0.6);
+                        
+                        // Accent
+                        p.fill(170, 0, 255); // Neon purple
+                        p.rect(enemy.x - enemy.size * 0.8, enemy.y + enemy.size/3, enemy.size * 1.6, enemy.size * 0.1);
+                        
+                    } else {
+                        // Type 3: Insectoid ship
+                        // Glow effect
+                        p.fill(255, 0, 200, 80); // Neon magenta glow
+                        p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 2, enemy.size);
+                        
+                        // Main body
+                        p.fill(40);
+                        p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size, enemy.size * 1.2);
+                        
+                        // Wings
+                        p.fill(100);
+                        p.triangle(
+                            enemy.x, enemy.y,
+                            enemy.x - enemy.size, enemy.y - enemy.size/2,
+                            enemy.x - enemy.size/2, enemy.y + enemy.size/2
+                        );
+                        p.triangle(
+                            enemy.x, enemy.y,
+                            enemy.x + enemy.size, enemy.y - enemy.size/2,
+                            enemy.x + enemy.size/2, enemy.y + enemy.size/2
+                        );
+                        
+                        // Eyes
+                        p.fill(255, 0, 200); // Neon magenta
+                        p.ellipse(enemy.x - enemy.size/4, enemy.y, enemy.size * 0.2, enemy.size * 0.2);
+                        p.ellipse(enemy.x + enemy.size/4, enemy.y, enemy.size * 0.2, enemy.size * 0.2);
+                    }
                 }
             }
 
             function drawPlayerBullets() {
-                p.fill(255);
                 p.noStroke();
                 for (let bullet of playerBullets) {
-                    p.rect(bullet.x - 1, bullet.y - 5, 2, 10);
+                    // Glow effect
+                    p.fill(255, 0, 255, 150); // Neon pink with alpha
+                    p.ellipse(bullet.x, bullet.y, 12, 12);
+                    
+                    // Core
+                    p.fill(255);
+                    p.ellipse(bullet.x, bullet.y, 6, 6);
                 }
             }
 
             function drawEnemyBullets() {
-                p.fill(255, 0, 0);
                 p.noStroke();
                 for (let bullet of enemyBullets) {
-                    p.rect(bullet.x - 1, bullet.y - 5, 2, 10);
+                    // Glow effect
+                    p.fill(170, 0, 255, 150); // Neon purple with alpha
+                    p.ellipse(bullet.x, bullet.y, 10, 10);
+                    
+                    // Core
+                    p.fill(255);
+                    p.ellipse(bullet.x, bullet.y, 4, 4);
                 }
             }
 
@@ -139,11 +259,11 @@ const GameBackground = () => {
                 let moveLeft = p.keyIsDown(p.LEFT_ARROW) || (p.mouseIsPressed && p.mouseX < buttonSize && p.mouseY > p.height - buttonSize);
                 let moveRight = p.keyIsDown(p.RIGHT_ARROW) || (p.mouseIsPressed && p.mouseX > p.width - buttonSize && p.mouseY > p.height - buttonSize);
                 let shoot = p.keyIsDown(32) || (p.mouseIsPressed && p.mouseX > p.width / 2 - buttonSize / 2 && p.mouseX < p.width / 2 + buttonSize / 2 && p.mouseY > p.height - buttonSize);
-                if (moveLeft) playerX -= 5;
-                if (moveRight) playerX += 5;
+                if (moveLeft) playerX -= 7;
+                if (moveRight) playerX += 7;
                 playerX = p.constrain(playerX, playerWidth / 2, p.width - playerWidth / 2);
                 if (shoot && shootCooldown <= 0) {
-                    playerBullets.push({ x: playerX, y: playerY - 15, speed: -10 });
+                    playerBullets.push({ x: playerX, y: playerY - 15, speed: -15 });
                     shootCooldown = 10;
                 }
                 if (shootCooldown > 0) shootCooldown--;
