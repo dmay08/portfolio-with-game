@@ -25,6 +25,8 @@ const GameBackground = () => {
             let enemyDirection = 1;
             let enemySpeed = 2;
             let buttonSize = 60;
+            let isGameOver = false;
+            let gameOverTimer = 0;
 
             p.setup = () => {
                 p.createCanvas(p.windowWidth, p.windowHeight).parent(sketchRef.current);
@@ -53,19 +55,52 @@ const GameBackground = () => {
                     });
                 }
             }
+            
+            function resetGame() {
+                lives = 3;
+                score = 0;
+                isGameOver = false;
+                playerBullets = [];
+                enemyBullets = [];
+                spawnEnemies();
+            }
 
             p.draw = () => {
                 p.background(0);
                 drawStars();
-                drawPlayer();
-                drawEnemies();
-                drawPlayerBullets();
-                drawEnemyBullets();
-                drawUI();
-                drawButtons();
-                handleInput();
-                updateGame();
+                
+                if (isGameOver) {
+                    drawGameOver();
+                } else {
+                    drawPlayer();
+                    drawEnemies();
+                    drawPlayerBullets();
+                    drawEnemyBullets();
+                    drawUI();
+                    drawButtons();
+                    handleInput();
+                    updateGame();
+                }
             };
+            
+            function drawGameOver() {
+                // White text with slight pulsing for visual emphasis
+                p.fill(255, 255, 255, 200 + p.sin(p.frameCount * 0.1) * 55);
+                p.textSize(70);
+                p.textAlign(p.CENTER, p.CENTER);
+                p.textStyle(p.BOLD);
+                p.text("GAME OVER", p.width / 2, p.height / 2);
+                
+                p.textSize(30);
+                p.textStyle(p.NORMAL);
+                p.text("Final Score: " + score, p.width / 2, p.height / 2 + 70);
+                
+                gameOverTimer++;
+                if (gameOverTimer > 240) { // 4 seconds at 60 FPS
+                    resetGame();
+                    gameOverTimer = 0;
+                }
+            }
 
             function drawStars() {
                 for (let star of stars) {
@@ -256,6 +291,8 @@ const GameBackground = () => {
             }
 
             function handleInput() {
+                if (isGameOver) return;
+                
                 let moveLeft = p.keyIsDown(p.LEFT_ARROW) || (p.mouseIsPressed && p.mouseX < buttonSize && p.mouseY > p.height - buttonSize);
                 let moveRight = p.keyIsDown(p.RIGHT_ARROW) || (p.mouseIsPressed && p.mouseX > p.width - buttonSize && p.mouseY > p.height - buttonSize);
                 let shoot = p.keyIsDown(32) || (p.mouseIsPressed && p.mouseX > p.width / 2 - buttonSize / 2 && p.mouseX < p.width / 2 + buttonSize / 2 && p.mouseY > p.height - buttonSize);
@@ -270,6 +307,8 @@ const GameBackground = () => {
             }
 
             function updateGame() {
+                if (isGameOver) return;
+                
                 for (let bullet of playerBullets) {
                     bullet.y += bullet.speed;
                 }
@@ -316,9 +355,7 @@ const GameBackground = () => {
                         enemyBullets.splice(i, 1);
                         lives--;
                         if (lives <= 0) {
-                            lives = 3;
-                            score = 0;
-                            spawnEnemies();
+                            isGameOver = true;
                         }
                     }
                 }
