@@ -1,21 +1,70 @@
 import React from 'react';
+import styled from 'styled-components';
 import './App.css';
 import GameBackground from './GameBackground';
 
+const Container = styled.div`
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+`;
+
+const Content = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  color: white;
+  padding: 3rem;
+`;
+
+const HeroSection = styled.div`
+  padding-left: 10rem;
+`;
+
+const Heading = styled.h1`
+  font-size: 3.75rem;
+  font-weight: bold;
+  margin-bottom: 2rem;
+`;
+
+const Description = styled.p`
+  font-size: 1.875rem;
+  margin-bottom: 3rem;
+`;
+
+const Button = styled.button`
+  padding: 1rem 2rem;
+  background-color: #1f2937;
+  color: white;
+  font-size: 1.25rem;
+  border-radius: 0.375rem;
+  border: 1px solid #374151;
+  transition: background-color 0.3s;
+  
+  &:hover {
+    background-color: #374151;
+  }
+`;
+
 function App() {
   return (
-    <div className="relative w-screen h-screen overflow-hidden">
-      <GameBackground />
-      <div className="absolute inset-0 z-10 flex flex-col items-start justify-center text-white p-12">
-        <div>
-          <h1 className="text-6xl font-bold mb-8">Hello,<br />I'm Danny</h1>
-          <p className="text-3xl mb-12">I'm a software developer</p>
-          <button className="px-8 py-4 bg-gray-800 text-white text-xl rounded-md hover:bg-gray-700 transition-colors border border-gray-700">
+    <Container className="app-container">
+      <GameBackground className="game-background" />
+      <Content className="content-wrapper">
+        <HeroSection className="hero-section">
+          <Heading className="hero-heading">Hello,<br />I'm Danny</Heading>
+          <Description className="hero-description">I'm a software developer</Description>
+          <Button className="projects-button">
             View Projects
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </HeroSection>
+      </Content>
+    </Container>
   );
 }
 
