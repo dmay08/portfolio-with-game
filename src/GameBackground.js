@@ -29,6 +29,14 @@ const GameBackground = () => {
             let gameOverTimer = 0;
             let playerHitEffect = 0;
             let explosions = [];
+            let powerups = [];
+            let powerupSpawnTimer = 300; // 5 seconds at 60fps
+            let activePowerups = {
+                shield: 0,
+                tripleShot: 0,
+                speedBoost: 0
+            };
+            let powerGainEffects = [];
 
             p.setup = () => {
                 p.createCanvas(p.windowWidth, p.windowHeight).parent(sketchRef.current);
@@ -43,6 +51,14 @@ const GameBackground = () => {
                     });
                 }
                 spawnEnemies();
+                
+                // Create initial powerups
+                powerups = []; // Clear any existing powerups
+                createPowerup('shield', p.width / 4, -50);
+                createPowerup('tripleShot', p.width / 2, -100);
+                createPowerup('speedBoost', p.width * 3/4, -150);
+                
+                console.log("Initial powerups created:", powerups.length);
             };
 
             function spawnEnemies() {
@@ -65,7 +81,14 @@ const GameBackground = () => {
                 playerBullets = [];
                 enemyBullets = [];
                 explosions = [];
+                powerups = [];
                 playerHitEffect = 0;
+                powerupSpawnTimer = 60; // Spawn a powerup quickly after resetting
+                activePowerups = {
+                    shield: 0,
+                    tripleShot: 0,
+                    speedBoost: 0
+                };
                 spawnEnemies();
             }
 
@@ -80,6 +103,7 @@ const GameBackground = () => {
                     drawEnemies();
                     drawPlayerBullets();
                     drawEnemyBullets();
+                    drawPowerups();
                     drawUI();
                     drawButtons();
                     handleInput();
@@ -140,9 +164,23 @@ const GameBackground = () => {
                     p.ellipse(playerX, playerY + playerHeight/2, playerWidth * 1.5, playerHeight * 1.5);
                 }
                 
-                // Thruster glow effect (animated)
+                // Shield effect if active
+                if (activePowerups.shield > 0) {
+                    p.fill(0, 200, 255, 80 + p.sin(p.frameCount * 0.2) * 40);
+                    p.ellipse(playerX, playerY + playerHeight/2, playerWidth * 2.2, playerHeight * 2);
+                }
+                
+                // Thruster glow effect enhanced with speed boost
+                let thrusterSize = 30;
+                if (activePowerups.speedBoost > 0) {
+                    thrusterSize = 50;
+                    p.fill(0, 255, 0, 120 + p.sin(p.frameCount * 0.3) * 50);
+                    p.ellipse(playerX, playerY + playerHeight + 20, thrusterSize + p.sin(p.frameCount * 0.4) * 15, thrusterSize - 10);
+                }
+                
+                // Normal thruster
                 p.fill(255, 0, 255, 100 + p.sin(p.frameCount * 0.2) * 50); // Neon pink
-                p.ellipse(playerX, playerY + playerHeight + 15, 30 + p.sin(p.frameCount * 0.3) * 10, 20);
+                p.ellipse(playerX, playerY + playerHeight + 15, thrusterSize + p.sin(p.frameCount * 0.3) * 10, 20);
                 
                 // Main body
                 p.fill(220); // Light grey
@@ -289,12 +327,198 @@ const GameBackground = () => {
                 }
             }
 
+            function drawPowerups() {
+                if (powerups.length === 0) {
+                    // Ensure there's always at least one powerup
+                    console.log("No powerups found, creating one");
+                    createPowerup('shield', p.random(100, p.width - 100), -50);
+                }
+                
+                // Draw each powerup
+                for (let i = 0; i < powerups.length; i++) {
+                    let powerup = powerups[i];
+                    
+                    // Update rotation and pulse
+                    powerup.rotation += 1;
+                    powerup.pulse += 0.1;
+                    
+                    // Create trail particles
+                    if (p.frameCount % 3 === 0) {
+                        powerup.particles.push({
+                            x: powerup.x + p.random(-10, 10),
+                            y: powerup.y + p.random(-10, 10),
+                            size: p.random(5, 15),
+                            alpha: 255,
+                            life: 30
+                        });
+                    }
+                    
+                    // Update and draw particles
+                    p.noStroke();
+                    for (let j = powerup.particles.length - 1; j >= 0; j--) {
+                        let particle = powerup.particles[j];
+                        particle.life--;
+                        particle.alpha -= 8;
+                        particle.y += 0.5; // Slight downward drift
+                        
+                        // Draw fading particles
+                        let particleColor;
+                        switch (powerup.type) {
+                            case 'shield':
+                                particleColor = p.color(150, 50, 255, particle.alpha);
+                                break;
+                            case 'tripleShot':
+                                particleColor = p.color(255, 50, 150, particle.alpha);
+                                break;
+                            case 'speedBoost':
+                                particleColor = p.color(255, 0, 255, particle.alpha);
+                                break;
+                        }
+                        p.fill(particleColor);
+                        p.ellipse(particle.x, particle.y, particle.size, particle.size);
+                        
+                        // Remove dead particles
+                        if (particle.life <= 0) {
+                            powerup.particles.splice(j, 1);
+                        }
+                    }
+                    
+                    // Main powerup glow - outer pulse
+                    p.push();
+                    p.translate(powerup.x, powerup.y);
+                    p.rotate(p.radians(powerup.rotation));
+                    
+                    // Pulsing size
+                    let pulseSize = 65 + Math.sin(powerup.pulse) * 10;
+                    
+                    // Outer glow
+                    p.noFill();
+                    for (let g = 0; g < 3; g++) {
+                        let glowSize = pulseSize + g * 5;
+                        let alpha = 100 - g * 30;
+                        switch (powerup.type) {
+                            case 'shield':
+                                p.stroke(150, 50, 255, alpha);
+                                break;
+                            case 'tripleShot':
+                                p.stroke(255, 50, 150, alpha);
+                                break;
+                            case 'speedBoost':
+                                p.stroke(255, 0, 255, alpha);
+                                break;
+                        }
+                        p.strokeWeight(3);
+                        p.ellipse(0, 0, glowSize, glowSize);
+                    }
+                    
+                    // Main powerup shape - changed to represent their function
+                    p.noStroke();
+                    switch (powerup.type) {
+                        case 'shield':
+                            // Simple shield shape
+                            // Main shield body
+                            p.fill(130, 50, 240);
+                            p.beginShape();
+                            p.vertex(0, -25);  // Top point
+                            p.vertex(20, -10); // Top right
+                            p.vertex(20, 15);  // Bottom right
+                            p.vertex(0, 25);   // Bottom point
+                            p.vertex(-20, 15); // Bottom left
+                            p.vertex(-20, -10); // Top left
+                            p.endShape(p.CLOSE);
+                            
+                            // Inner shield detail
+                            p.fill(180, 100, 255);
+                            p.beginShape();
+                            p.vertex(0, -15);  // Top point
+                            p.vertex(12, -5);  // Top right
+                            p.vertex(12, 10);  // Bottom right
+                            p.vertex(0, 18);   // Bottom point
+                            p.vertex(-12, 10); // Bottom left
+                            p.vertex(-12, -5); // Top left
+                            p.endShape(p.CLOSE);
+                            
+                            // Center dot
+                            p.fill(255);
+                            p.ellipse(0, 0, 8, 8);
+                            break;
+                            
+                        case 'tripleShot':
+                            // Pistol body
+                            p.fill(220, 20, 120);
+                            p.rect(-15, -5, 30, 15); // Horizontal body
+                            
+                            // Handle
+                            p.fill(180, 10, 100);
+                            p.rect(-10, 10, 10, 15); // Vertical handle
+                            
+                            // Three barrels
+                            p.fill(180, 10, 100);
+                            // p.rect(10, -10, 15, 4);  // Top barrel
+                            p.rect(10, -2, 15, 4);   // Middle barrel
+                            // p.rect(10, 6, 15, 4);    // Bottom barrel
+                            
+                            // Muzzle details
+                            p.fill(255);
+                            p.ellipse(25, -8, 3, 3); // Top muzzle
+                            p.ellipse(25, 0, 3, 3);  // Middle muzzle
+                            p.ellipse(25, 8, 3, 3);  // Bottom muzzle
+                            break;
+                            
+                        case 'speedBoost':
+                            // Simple rocket shape
+                            // Rocket body
+                            p.fill(220, 50, 220);
+                            p.rect(-8, -20, 16, 30, 5);
+                            
+                            // Rocket nose
+                            p.fill(255, 100, 255);
+                            p.triangle(-8, -20, 0, -30, 8, -20);
+                            
+                            // Rocket fins
+                            p.fill(255, 100, 255);
+                            p.triangle(-8, 10, -15, 20, -8, 5);  // Left fin
+                            p.triangle(8, 10, 15, 20, 8, 5);     // Right fin
+                            
+                            // Rocket flame - animated
+                            p.fill(255, 150, 50, 200 + Math.sin(p.frameCount * 0.3) * 55);
+                            p.triangle(-6, 10, 0, 25 + Math.sin(p.frameCount * 0.5) * 5, 6, 10);
+                            p.fill(255, 255, 100, 150 + Math.sin(p.frameCount * 0.3) * 55);
+                            p.triangle(-3, 10, 0, 18 + Math.sin(p.frameCount * 0.5) * 3, 3, 10);
+                            break;
+                    }
+                    
+                    p.pop();
+                }
+            }
+
             function drawUI() {
                 p.fill(255);
                 p.textSize(16);
                 p.textAlign(p.LEFT);
                 p.text("Score: " + score, 10, 20);
                 p.text("Lives: " + lives, 10, 40);
+                
+                // Draw active powerups
+                let yPos = 70;
+                p.textAlign(p.LEFT);
+                
+                if (activePowerups.shield > 0) {
+                    p.fill(0, 200, 255);
+                    p.text("🛡️ Shield: " + Math.ceil(activePowerups.shield / 60) + "s", 10, yPos);
+                    yPos += 25;
+                }
+                
+                if (activePowerups.tripleShot > 0) {
+                    p.fill(255, 50, 50);
+                    p.text("🔥 Triple Shot: " + Math.ceil(activePowerups.tripleShot / 60) + "s", 10, yPos);
+                    yPos += 25;
+                }
+                
+                if (activePowerups.speedBoost > 0) {
+                    p.fill(50, 255, 50);
+                    p.text("⚡ Speed Boost: " + Math.ceil(activePowerups.speedBoost / 60) + "s", 10, yPos);
+                }
             }
 
             function drawButtons() {
@@ -317,27 +541,128 @@ const GameBackground = () => {
                 let moveLeft = p.keyIsDown(p.LEFT_ARROW) || (p.mouseIsPressed && p.mouseX < buttonSize && p.mouseY > p.height - buttonSize);
                 let moveRight = p.keyIsDown(p.RIGHT_ARROW) || (p.mouseIsPressed && p.mouseX > p.width - buttonSize && p.mouseY > p.height - buttonSize);
                 let shoot = p.keyIsDown(32) || (p.mouseIsPressed && p.mouseX > p.width / 2 - buttonSize / 2 && p.mouseX < p.width / 2 + buttonSize / 2 && p.mouseY > p.height - buttonSize);
-                if (moveLeft) playerX -= 7;
-                if (moveRight) playerX += 7;
+                
+                // Speed boost powerup affects movement speed
+                const moveSpeed = activePowerups.speedBoost > 0 ? 12 : 7;
+                
+                if (moveLeft) playerX -= moveSpeed;
+                if (moveRight) playerX += moveSpeed;
                 playerX = p.constrain(playerX, playerWidth / 2, p.width - playerWidth / 2);
+                
                 if (shoot && shootCooldown <= 0) {
+                    // Normal shot
                     playerBullets.push({ x: playerX, y: playerY - 15, speed: -15 });
+                    
+                    // Triple shot powerup
+                    if (activePowerups.tripleShot > 0) {
+                        playerBullets.push({ x: playerX - 15, y: playerY, speed: -15 });
+                        playerBullets.push({ x: playerX + 15, y: playerY, speed: -15 });
+                    }
+                    
                     shootCooldown = 10;
                 }
+                
                 if (shootCooldown > 0) shootCooldown--;
             }
 
             function updateGame() {
                 if (isGameOver) return;
                 
+                // Update active powerups timers
+                for (let type in activePowerups) {
+                    if (activePowerups[type] > 0) {
+                        activePowerups[type]--;
+                    }
+                }
+                
+                // Auto-spawn new powerups every 5 seconds
+                powerupSpawnTimer--;
+                if (powerupSpawnTimer <= 0) {
+                    const types = ['shield', 'tripleShot', 'speedBoost'];
+                    const type = types[Math.floor(p.random(types.length))];
+                    createPowerup(type, p.random(100, p.width - 100), -50);
+                    console.log("Timer spawned new powerup:", type);
+                    powerupSpawnTimer = 300; // Reset to 5 seconds
+                }
+                
+                // Move powerups down the screen
+                for (let i = powerups.length - 1; i >= 0; i--) {
+                    let powerup = powerups[i];
+                    powerup.y += powerup.speed; // Faster, varying speeds
+                    
+                    // Add slight horizontal wobble
+                    powerup.x += Math.sin(p.frameCount * 0.05 + i) * 1.5;
+                    
+                    // Remove if offscreen
+                    if (powerup.y > p.height + 50) {
+                        powerups.splice(i, 1);
+                        console.log("Powerup went offscreen, removed");
+                    }
+                }
+                
+                // Check for powerup collection
+                let playerHitBox = { 
+                    left: playerX - playerWidth, 
+                    right: playerX + playerWidth, 
+                    top: playerY - playerHeight/2, 
+                    bottom: playerY + playerHeight 
+                };
+                
+                for (let i = powerups.length - 1; i >= 0; i--) {
+                    let powerup = powerups[i];
+                    let powerupBB = { 
+                        left: powerup.x - 30, 
+                        right: powerup.x + 30, 
+                        top: powerup.y - 30, 
+                        bottom: powerup.y + 30 
+                    };
+                    
+                    if (rectanglesOverlap(playerHitBox, powerupBB)) {
+                        console.log("Powerup collected:", powerup.type);
+                        
+                        // Apply powerup effect
+                        activePowerups[powerup.type] = 600; // 10 seconds
+                        
+                        // Create power gaining effect instead of explosion
+                        // Radial energy waves expanding outward
+                        for (let j = 0; j < 3; j++) {
+                            let color;
+                            switch (powerup.type) {
+                                case 'shield': color = p.color(150, 50, 255); break;
+                                case 'tripleShot': color = p.color(255, 50, 150); break;
+                                case 'speedBoost': color = p.color(255, 0, 255); break;
+                            }
+                            
+                            // Add energy wave effect
+                            powerGainEffects.push({
+                                x: playerX,
+                                y: playerY,
+                                color: color,
+                                radius: 20,
+                                maxRadius: 100 + j * 30,
+                                alpha: 255
+                            });
+                        }
+                        
+                        // Remove collected powerup
+                        powerups.splice(i, 1);
+                        
+                        // Add score
+                        score += 5;
+                    }
+                }
+                
+                // Regular game updates
                 for (let bullet of playerBullets) {
                     bullet.y += bullet.speed;
                 }
                 playerBullets = playerBullets.filter(b => b.y > -10);
+                
                 for (let bullet of enemyBullets) {
                     bullet.y += bullet.speed;
                 }
                 enemyBullets = enemyBullets.filter(b => b.y < p.height + 10);
+                
                 let shouldReverse = false;
                 for (let enemy of enemies) {
                     enemy.x += enemyDirection * enemySpeed;
@@ -386,7 +711,9 @@ const GameBackground = () => {
                         }
                     }
                 }
-                let playerBB = { left: playerX - playerWidth / 2, right: playerX + playerWidth / 2, top: playerY - 15, bottom: playerY + playerHeight + 5 };
+                
+                // Check player collision with enemy bullets
+                let playerBB = { left: playerX - playerWidth, right: playerX + playerWidth, top: playerY - playerHeight/2, bottom: playerY + playerHeight };
                 for (let i = enemyBullets.length - 1; i >= 0; i--) {
                     let bullet = enemyBullets[i];
                     let bulletBB = { left: bullet.x - 1, right: bullet.x + 1, top: bullet.y - 5, bottom: bullet.y + 5 };
@@ -400,6 +727,12 @@ const GameBackground = () => {
                             size: 40,
                             frame: 0
                         });
+                        
+                        // Check for shield
+                        if (activePowerups.shield > 0) {
+                            // Shield absorbs hit without damage
+                            continue;
+                        }
                         
                         // Player hit effect
                         playerHitEffect = 30;
@@ -420,8 +753,20 @@ const GameBackground = () => {
                         }
                     }
                 }
+                
                 if (enemies.length === 0) {
                     spawnEnemies();
+                }
+                
+                // Update power gain effects
+                for (let i = powerGainEffects.length - 1; i >= 0; i--) {
+                    let effect = powerGainEffects[i];
+                    effect.radius += 3;
+                    effect.alpha -= 5;
+                    
+                    if (effect.radius >= effect.maxRadius || effect.alpha <= 0) {
+                        powerGainEffects.splice(i, 1);
+                    }
                 }
             }
 
@@ -456,6 +801,77 @@ const GameBackground = () => {
                         explosions.splice(i, 1);
                     }
                 }
+                
+                // Draw power gain effects
+                for (let effect of powerGainEffects) {
+                    p.noFill();
+                    let color = effect.color;
+                    color.setAlpha(effect.alpha);
+                    p.stroke(color);
+                    p.strokeWeight(3);
+                    p.ellipse(effect.x, effect.y, effect.radius * 2, effect.radius * 2);
+                }
+            }
+
+            function spawnRandomPowerup() {
+                const types = ['shield', 'tripleShot', 'speedBoost'];
+                const type = types[Math.floor(p.random(types.length))];
+                
+                console.log("Spawning powerup:", type); // Debug message
+                
+                powerups.push({
+                    x: p.random(100, p.width - 100),
+                    y: -50,
+                    type: type,
+                    speed: p.random(1, 3) // Variable speed
+                });
+            }
+
+            function createPowerup(type, x, y) {
+                powerups.push({
+                    type: type,
+                    x: x,
+                    y: y,
+                    speed: p.random(3, 7),          // Faster, varying speeds
+                    rotation: p.random(0, 360),     // Starting rotation
+                    pulse: p.random(0, 100),        // For offset pulsing effect
+                    particles: []                   // Trailing particles
+                });
+                console.log("Created powerup:", type, "at", x, y);
+            }
+
+            // Helper function to draw regular polygons
+            function drawPolygon(x, y, radius, sides, rotation = 0) {
+                p.beginShape();
+                for (let i = 0; i < sides; i++) {
+                    let angle = p.radians(rotation + i * 360 / sides);
+                    let vx = x + cos(angle) * radius;
+                    let vy = y + sin(angle) * radius;
+                    p.vertex(vx, vy);
+                }
+                p.endShape(p.CLOSE);
+            }
+            
+            // Helper function to draw a star
+            function drawStar(x, y, innerRadius, outerRadius, points) {
+                p.beginShape();
+                for (let i = 0; i < points * 2; i++) {
+                    let angle = p.radians(i * 180 / points);
+                    let radius = i % 2 === 0 ? outerRadius : innerRadius;
+                    let vx = x + cos(angle) * radius;
+                    let vy = y + sin(angle) * radius;
+                    p.vertex(vx, vy);
+                }
+                p.endShape(p.CLOSE);
+            }
+            
+            // Helper functions for drawPolygon
+            function cos(angle) {
+                return Math.cos(angle);
+            }
+            
+            function sin(angle) {
+                return Math.sin(angle);
             }
 
             p.windowResized = () => {
