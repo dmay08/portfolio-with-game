@@ -642,6 +642,7 @@ const GameBackground = () => {
                                 case 'shield': color = p.color(150, 50, 255); break;
                                 case 'tripleShot': color = p.color(255, 50, 150); break;
                                 case 'speedBoost': color = p.color(255, 0, 255); break;
+                                default: color = p.color(255, 255, 255); break;
                             }
                             
                             // Add energy wave effect
@@ -902,7 +903,7 @@ const GameBackground = () => {
         };
     }, []);
 
-    return <div ref={sketchRef} className="absolute inset-0 z-0" />;
+    return <div ref={sketchRef} style={{ position: 'absolute', inset: 0, zIndex: 0 }} />;
 };
 
 export default GameBackground;

@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-import './App.css';
 import GameBackground from './GameBackground';
 
 const Container = styled.div`
@@ -52,20 +51,20 @@ const Button = styled.button`
 `;
 
 function App() {
-  return (
-    <Container className="app-container">
-      <GameBackground className="game-background" />
-      <Content className="content-wrapper">
-        <HeroSection className="hero-section">
-          <Heading className="hero-heading">Hello,<br />I'm Danny</Heading>
-          <Description className="hero-description">I'm a software developer</Description>
-          <Button className="projects-button">
-            View Projects
-          </Button>
-        </HeroSection>
-      </Content>
-    </Container>
-  );
+    return (
+        <Container className="app-container">
+            <GameBackground className="game-background" />
+            <Content className="content-wrapper">
+                <HeroSection className="hero-section">
+                    <Heading className="hero-heading">Hello,<br />I'm Danny</Heading>
+                    <Description className="hero-description">I'm a software developer</Description>
+                    <Button className="projects-button">
+                        View Projects
+                    </Button>
+                </HeroSection>
+            </Content>
+        </Container>
+    );
 }
 
 export default App;
