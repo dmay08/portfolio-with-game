@@ -373,6 +373,9 @@ const GameBackground = () => {
                             case 'speedBoost':
                                 particleColor = p.color(255, 0, 255, particle.alpha);
                                 break;
+                            default:
+                                particleColor = p.color(255, 255, 255, particle.alpha);
+                                break;
                         }
                         p.fill(particleColor);
                         p.ellipse(particle.x, particle.y, particle.size, particle.size);
@@ -405,6 +408,9 @@ const GameBackground = () => {
                                 break;
                             case 'speedBoost':
                                 p.stroke(255, 0, 255, alpha);
+                                break;
+                            default:
+                                p.stroke(255, 255, 255, alpha);
                                 break;
                         }
                         p.strokeWeight(3);
@@ -485,6 +491,11 @@ const GameBackground = () => {
                             p.triangle(-6, 10, 0, 25 + Math.sin(p.frameCount * 0.5) * 5, 6, 10);
                             p.fill(255, 255, 100, 150 + Math.sin(p.frameCount * 0.3) * 55);
                             p.triangle(-3, 10, 0, 18 + Math.sin(p.frameCount * 0.5) * 3, 3, 10);
+                            break;
+                        default:
+                            // Default shape (circle)
+                            p.fill(255);
+                            p.ellipse(0, 0, 30, 30);
                             break;
                     }
                     
@@ -813,6 +824,8 @@ const GameBackground = () => {
                 }
             }
 
+            // The below functions are kept for future use but currently not actively used
+            // eslint-disable-next-line no-unused-vars
             function spawnRandomPowerup() {
                 const types = ['shield', 'tripleShot', 'speedBoost'];
                 const type = types[Math.floor(p.random(types.length))];
@@ -841,6 +854,7 @@ const GameBackground = () => {
             }
 
             // Helper function to draw regular polygons
+            // eslint-disable-next-line no-unused-vars
             function drawPolygon(x, y, radius, sides, rotation = 0) {
                 p.beginShape();
                 for (let i = 0; i < sides; i++) {
@@ -853,6 +867,7 @@ const GameBackground = () => {
             }
             
             // Helper function to draw a star
+            // eslint-disable-next-line no-unused-vars
             function drawStar(x, y, innerRadius, outerRadius, points) {
                 p.beginShape();
                 for (let i = 0; i < points * 2; i++) {
