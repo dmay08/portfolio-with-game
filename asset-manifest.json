@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/portfolio-with-game/static/css/main.e6c13ad2.css",
-    "main.js": "/portfolio-with-game/static/js/main.5d10f6dc.js",
-    "static/js/453.eb2caff9.chunk.js": "/portfolio-with-game/static/js/453.eb2caff9.chunk.js",
-    "index.html": "/portfolio-with-game/index.html",
-    "main.e6c13ad2.css.map": "/portfolio-with-game/static/css/main.e6c13ad2.css.map",
-    "main.5d10f6dc.js.map": "/portfolio-with-game/static/js/main.5d10f6dc.js.map",
-    "453.eb2caff9.chunk.js.map": "/portfolio-with-game/static/js/453.eb2caff9.chunk.js.map"
+    "main.css": "/static/css/main.e6c13ad2.css",
+    "main.js": "/static/js/main.a2cb6cbe.js",
+    "static/js/453.eb2caff9.chunk.js": "/static/js/453.eb2caff9.chunk.js",
+    "index.html": "/index.html",
+    "main.e6c13ad2.css.map": "/static/css/main.e6c13ad2.css.map",
+    "main.a2cb6cbe.js.map": "/static/js/main.a2cb6cbe.js.map",
+    "453.eb2caff9.chunk.js.map": "/static/js/453.eb2caff9.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.5d10f6dc.js"
+    "static/js/main.a2cb6cbe.js"
   ]
 }
