@@ -30,7 +30,7 @@ const GameBackground = () => {
             let playerHitEffect = 0;
             let explosions = [];
             let powerups = [];
-            let powerupSpawnTimer = 300; // 5 seconds at 60fps
+            let powerupSpawnTimer = 900; // Changed from 300 (5 seconds) to 900 (15 seconds at 60fps)
             let activePowerups = {
                 shield: 0,
                 tripleShot: 0,
@@ -52,13 +52,11 @@ const GameBackground = () => {
                 }
                 spawnEnemies();
                 
-                // Create initial powerups
+                // Instead of creating an initial powerup, set a random timer for the first one
                 powerups = []; // Clear any existing powerups
-                createPowerup('shield', p.width / 4, -50);
-                createPowerup('tripleShot', p.width / 2, -100);
-                createPowerup('speedBoost', p.width * 3/4, -150);
+                powerupSpawnTimer = p.floor(p.random(120, 600)); // Random time between 2-10 seconds
                 
-                console.log("Initial powerups created:", powerups.length);
+                console.log("First powerup will appear in", Math.ceil(powerupSpawnTimer / 60), "seconds");
             };
 
             function spawnEnemies() {
@@ -83,7 +81,7 @@ const GameBackground = () => {
                 explosions = [];
                 powerups = [];
                 playerHitEffect = 0;
-                powerupSpawnTimer = 60; // Spawn a powerup quickly after resetting
+                powerupSpawnTimer = 300; // Changed from 60 to 300 (5 seconds)
                 activePowerups = {
                     shield: 0,
                     tripleShot: 0,
@@ -328,11 +326,7 @@ const GameBackground = () => {
             }
 
             function drawPowerups() {
-                if (powerups.length === 0) {
-                    // Ensure there's always at least one powerup
-                    console.log("No powerups found, creating one");
-                    createPowerup('shield', p.random(100, p.width - 100), -50);
-                }
+                // Removed the auto-spawn code that creates a powerup when none exist
                 
                 // Draw each powerup
                 for (let i = 0; i < powerups.length; i++) {
@@ -576,6 +570,20 @@ const GameBackground = () => {
                 if (shootCooldown > 0) shootCooldown--;
             }
 
+            // New circle-rectangle collision detection function
+            function circleRectangleOverlap(circle, rect) {
+                // Find the closest point in the rectangle to the circle
+                let closestX = Math.max(rect.left, Math.min(circle.x, rect.right));
+                let closestY = Math.max(rect.top, Math.min(circle.y, rect.bottom));
+                
+                // Calculate the distance between the circle's center and this closest point
+                let distanceX = circle.x - closestX;
+                let distanceY = circle.y - closestY;
+                
+                // If the distance is less than the circle's radius, there's a collision
+                return (distanceX * distanceX + distanceY * distanceY) < (circle.radius * circle.radius);
+            }
+
             function updateGame() {
                 if (isGameOver) return;
                 
@@ -586,14 +594,14 @@ const GameBackground = () => {
                     }
                 }
                 
-                // Auto-spawn new powerups every 5 seconds
+                // Auto-spawn new powerups - timer increased from 5 to 15 seconds
                 powerupSpawnTimer--;
                 if (powerupSpawnTimer <= 0) {
                     const types = ['shield', 'tripleShot', 'speedBoost'];
                     const type = types[Math.floor(p.random(types.length))];
                     createPowerup(type, p.random(100, p.width - 100), -50);
                     console.log("Timer spawned new powerup:", type);
-                    powerupSpawnTimer = 300; // Reset to 5 seconds
+                    powerupSpawnTimer = 900; // Reset to 15 seconds (changed from 300)
                 }
                 
                 // Move powerups down the screen
@@ -691,13 +699,24 @@ const GameBackground = () => {
                 if (shouldReverse) {
                     enemyDirection *= -1;
                 }
+                
+                // Updated bullet-enemy collision with circle-rectangle collision detection
                 for (let i = playerBullets.length - 1; i >= 0; i--) {
                     let bullet = playerBullets[i];
                     let bulletBB = { left: bullet.x - 1, right: bullet.x + 1, top: bullet.y - 5, bottom: bullet.y + 5 };
+                    
                     for (let j = enemies.length - 1; j >= 0; j--) {
                         let enemy = enemies[j];
-                        let enemyBB = { left: enemy.x - enemy.size / 2, right: enemy.x + enemy.size / 2, top: enemy.y, bottom: enemy.y + enemy.size / 2 };
-                        if (rectanglesOverlap(bulletBB, enemyBB)) {
+                        
+                        // Create a circle representation for enemy instead of a small rectangle
+                        let enemyCircle = { 
+                            x: enemy.x, 
+                            y: enemy.y + enemy.size/4, // Adjust center point to match visual center
+                            radius: enemy.size * 0.9   // Make radius match the visual size of enemy ships
+                        };
+                        
+                        // Use circle-rectangle collision detection
+                        if (circleRectangleOverlap(enemyCircle, bulletBB)) {
                             playerBullets.splice(i, 1);
                             
                             // Create explosion at impact point
@@ -781,6 +800,7 @@ const GameBackground = () => {
                     }
                 }
             }
+
 
             function rectanglesOverlap(r1, r2) {
                 return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
