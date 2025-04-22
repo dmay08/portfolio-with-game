@@ -37,6 +37,8 @@ const GameBackground = () => {
                 speedBoost: 0
             };
             let powerGainEffects = [];
+            let alienHeads = []; // Array to track alien heads
+            let alienSpawnTimer = 180; // Spawn a new alien head every 3 seconds
 
             p.setup = () => {
                 p.createCanvas(p.windowWidth, p.windowHeight).parent(sketchRef.current);
@@ -55,6 +57,10 @@ const GameBackground = () => {
                 // Instead of creating an initial powerup, set a random timer for the first one
                 powerups = []; // Clear any existing powerups
                 powerupSpawnTimer = p.floor(p.random(120, 600)); // Random time between 2-10 seconds
+                
+                // Initialize alien heads array
+                alienHeads = [];
+                alienSpawnTimer = p.floor(p.random(60, 180));
                 
                 console.log("First powerup will appear in", Math.ceil(powerupSpawnTimer / 60), "seconds");
             };
@@ -80,8 +86,10 @@ const GameBackground = () => {
                 enemyBullets = [];
                 explosions = [];
                 powerups = [];
+                alienHeads = []; // Reset alien heads
                 playerHitEffect = 0;
                 powerupSpawnTimer = 300; // Changed from 60 to 300 (5 seconds)
+                alienSpawnTimer = 180; // Reset alien spawn timer
                 activePowerups = {
                     shield: 0,
                     tripleShot: 0,
@@ -102,6 +110,7 @@ const GameBackground = () => {
                     drawPlayerBullets();
                     drawEnemyBullets();
                     drawPowerups();
+                    drawAlienHeads(); // Draw alien heads
                     drawUI();
                     drawButtons();
                     handleInput();
@@ -168,57 +177,147 @@ const GameBackground = () => {
                     p.ellipse(playerX, playerY + playerHeight/2, playerWidth * 2.2, playerHeight * 2);
                 }
                 
-                // Thruster glow effect enhanced with speed boost
-                let thrusterSize = 30;
+                // Improved thruster effects
+                const baseY = playerY + playerHeight;
+                
+                // Main thruster flame effect
                 if (activePowerups.speedBoost > 0) {
-                    thrusterSize = 50;
-                    p.fill(0, 255, 0, 120 + p.sin(p.frameCount * 0.3) * 50);
-                    p.ellipse(playerX, playerY + playerHeight + 20, thrusterSize + p.sin(p.frameCount * 0.4) * 15, thrusterSize - 10);
+                    // Enhanced thruster with speed boost
+                    p.fill(0, 255, 150, 180 + p.sin(p.frameCount * 0.3) * 50);
+                    
+                    // Main flame
+                    p.beginShape();
+                    p.vertex(playerX - 8, baseY);
+                    p.vertex(playerX - 15, baseY + 15 + p.sin(p.frameCount * 0.4) * 5);
+                    p.vertex(playerX, baseY + 40 + p.sin(p.frameCount * 0.5) * 8);
+                    p.vertex(playerX + 15, baseY + 15 + p.sin(p.frameCount * 0.4) * 5);
+                    p.vertex(playerX + 8, baseY);
+                    p.endShape(p.CLOSE);
+                    
+                    // Inner flame (brighter)
+                    p.fill(100, 255, 200, 200);
+                    p.beginShape();
+                    p.vertex(playerX - 4, baseY);
+                    p.vertex(playerX - 8, baseY + 10 + p.sin(p.frameCount * 0.4) * 3);
+                    p.vertex(playerX, baseY + 25 + p.sin(p.frameCount * 0.5) * 5);
+                    p.vertex(playerX + 8, baseY + 10 + p.sin(p.frameCount * 0.4) * 3);
+                    p.vertex(playerX + 4, baseY);
+                    p.endShape(p.CLOSE);
+                } else {
+                    // Regular thruster
+                    p.fill(255, 50, 255, 180 + p.sin(p.frameCount * 0.3) * 50);
+                    
+                    // Main flame
+                    p.beginShape();
+                    p.vertex(playerX - 7, baseY);
+                    p.vertex(playerX - 10, baseY + 10 + p.sin(p.frameCount * 0.4) * 3);
+                    p.vertex(playerX, baseY + 25 + p.sin(p.frameCount * 0.5) * 5);
+                    p.vertex(playerX + 10, baseY + 10 + p.sin(p.frameCount * 0.4) * 3);
+                    p.vertex(playerX + 7, baseY);
+                    p.endShape(p.CLOSE);
+                    
+                    // Inner flame (brighter)
+                    p.fill(255, 150, 255, 200);
+                    p.beginShape();
+                    p.vertex(playerX - 3, baseY);
+                    p.vertex(playerX - 5, baseY + 7 + p.sin(p.frameCount * 0.4) * 2);
+                    p.vertex(playerX, baseY + 15 + p.sin(p.frameCount * 0.5) * 3);
+                    p.vertex(playerX + 5, baseY + 7 + p.sin(p.frameCount * 0.4) * 2);
+                    p.vertex(playerX + 3, baseY);
+                    p.endShape(p.CLOSE);
                 }
                 
-                // Normal thruster
-                p.fill(255, 0, 255, 100 + p.sin(p.frameCount * 0.2) * 50); // Neon pink
-                p.ellipse(playerX, playerY + playerHeight + 15, thrusterSize + p.sin(p.frameCount * 0.3) * 10, 20);
+                // Side thrusters
+                p.fill(255, 100, 255, 150 + p.sin(p.frameCount * 0.2) * 40);
+                p.beginShape(); // Left thruster
+                p.vertex(playerX - playerWidth*0.8, playerY + playerHeight*0.7);
+                p.vertex(playerX - playerWidth*0.9, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3);
+                p.vertex(playerX - playerWidth*0.7, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3);
+                p.endShape(p.CLOSE);
                 
-                // Main body
+                p.beginShape(); // Right thruster
+                p.vertex(playerX + playerWidth*0.8, playerY + playerHeight*0.7);
+                p.vertex(playerX + playerWidth*0.9, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3);
+                p.vertex(playerX + playerWidth*0.7, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3);
+                p.endShape(p.CLOSE);
+                
+                // Redesigned spaceship
+                // Main body - elongated teardrop shape
                 p.fill(220); // Light grey
-                p.ellipse(playerX, playerY + playerHeight/2, playerWidth * 0.9, playerHeight * 1.1);
+                p.beginShape();
+                p.vertex(playerX, playerY - playerHeight/3); // Nose
+                p.bezierVertex(
+                    playerX + playerWidth/2, playerY, // Control point 1
+                    playerX + playerWidth/2, playerY + playerHeight/2, // Control point 2
+                    playerX, playerY + playerHeight // Bottom point
+                );
+                p.bezierVertex(
+                    playerX - playerWidth/2, playerY + playerHeight/2, // Control point 1
+                    playerX - playerWidth/2, playerY, // Control point 2
+                    playerX, playerY - playerHeight/3 // Back to nose
+                );
+                p.endShape();
                 
-                // Cockpit
-                p.fill(50); // Dark grey
-                p.ellipse(playerX, playerY + playerHeight/3, playerWidth/2, playerHeight/4);
+                // Armored plates
+                p.fill(180); // Medium grey
+                // Left plate
+                p.beginShape();
+                p.vertex(playerX - playerWidth/10, playerY);
+                p.vertex(playerX - playerWidth/2, playerY + playerHeight/4);
+                p.vertex(playerX - playerWidth/3, playerY + playerHeight*0.6);
+                p.vertex(playerX - playerWidth/10, playerY + playerHeight*0.4);
+                p.endShape(p.CLOSE);
+                
+                // Right plate
+                p.beginShape();
+                p.vertex(playerX + playerWidth/10, playerY);
+                p.vertex(playerX + playerWidth/2, playerY + playerHeight/4);
+                p.vertex(playerX + playerWidth/3, playerY + playerHeight*0.6);
+                p.vertex(playerX + playerWidth/10, playerY + playerHeight*0.4);
+                p.endShape(p.CLOSE);
+                
+                // Cockpit - blue glass dome with highlight
+                p.fill(30, 100, 255, 200); // Blue tinted glass
+                p.ellipse(playerX, playerY + playerHeight/6, playerWidth/2, playerHeight/4);
+                
+                // Cockpit highlight
+                p.fill(200, 220, 255, 150);
+                p.arc(playerX - playerWidth/10, playerY + playerHeight/8, playerWidth/4, playerHeight/8, p.PI, 2*p.PI);
                 
                 // Wings
-                p.fill(180); // Medium grey
+                p.fill(160); // Darker grey
                 // Left wing
                 p.beginShape();
-                p.vertex(playerX - playerWidth/4, playerY + playerHeight/2);
-                p.vertex(playerX - playerWidth*1.2, playerY + playerHeight*0.7);
-                p.vertex(playerX - playerWidth/2, playerY + playerHeight*0.9);
+                p.vertex(playerX - playerWidth/4, playerY + playerHeight*0.45);
+                p.vertex(playerX - playerWidth*1.2, playerY + playerHeight*0.65);
+                p.vertex(playerX - playerWidth/2, playerY + playerHeight*0.85);
                 p.endShape(p.CLOSE);
+                
                 // Right wing
                 p.beginShape();
-                p.vertex(playerX + playerWidth/4, playerY + playerHeight/2);
-                p.vertex(playerX + playerWidth*1.2, playerY + playerHeight*0.7);
-                p.vertex(playerX + playerWidth/2, playerY + playerHeight*0.9);
+                p.vertex(playerX + playerWidth/4, playerY + playerHeight*0.45);
+                p.vertex(playerX + playerWidth*1.2, playerY + playerHeight*0.65);
+                p.vertex(playerX + playerWidth/2, playerY + playerHeight*0.85);
                 p.endShape(p.CLOSE);
                 
                 // Engine area
-                p.fill(30); // Very dark grey
-                p.rect(playerX - playerWidth/5, playerY + playerHeight*0.7, playerWidth*0.4, playerHeight*0.3, 5);
+                p.fill(40); // Dark grey
+                p.rect(playerX - playerWidth/5, playerY + playerHeight*0.7, playerWidth*0.4, playerHeight*0.25, 5);
                 
-                // Details
-                p.fill(255); // White highlights
-                p.rect(playerX - playerWidth/8, playerY + playerHeight/10, playerWidth/4, playerHeight/20, 2);
-                p.rect(playerX - playerWidth/8 + playerWidth/4 + playerWidth/20, playerY + playerHeight/10, playerWidth/4, playerHeight/20, 2);
+                // Neon details and highlights
+                // Engine glow
+                p.fill(255, 50, 255, 80); // Pink glow
+                p.ellipse(playerX, playerY + playerHeight*0.83, playerWidth*0.3, playerHeight*0.1);
                 
-                // Top fin
-                p.fill(100); // Grey
-                p.triangle(
-                    playerX, playerY + playerHeight/6,
-                    playerX - playerWidth/10, playerY + playerHeight/2,
-                    playerX + playerWidth/10, playerY + playerHeight/2
-                );
+                // Side thrusters housings
+                p.fill(60);
+                p.rect(playerX - playerWidth*0.85, playerY + playerHeight*0.65, playerWidth*0.2, playerHeight*0.1, 2);
+                p.rect(playerX + playerWidth*0.65, playerY + playerHeight*0.65, playerWidth*0.2, playerHeight*0.1, 2);
+                
+                // Side pod details
+                p.fill(255); // White accents
+                p.rect(playerX - playerWidth*0.9, playerY + playerHeight*0.5, playerWidth*0.15, playerHeight*0.02, 1);
+                p.rect(playerX + playerWidth*0.75, playerY + playerHeight*0.5, playerWidth*0.15, playerHeight*0.02, 1);
             }
 
             function drawEnemies() {
@@ -228,73 +327,171 @@ const GameBackground = () => {
                     
                     // Enemy type variations
                     if (enemy.type === 0) {
-                        // Type 1: Saucer with dome
+                        // Type 1: Advanced Saucer with Tech Details
+                        
                         // Glow effect
                         p.fill(255, 0, 255, 80); // Neon pink glow
                         p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 2, enemy.size);
                         
-                        // Main body
+                        // Main saucer body - metallic grey
                         p.fill(70);
                         p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 1.8, enemy.size * 0.7);
                         
-                        // Dome
+                        // Detailed body ridges
+                        p.fill(40);
+                        p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 1.6, enemy.size * 0.5);
+                        p.fill(90);
+                        p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 1.4, enemy.size * 0.3);
+                        
+                        // Center dome with details
                         p.fill(200);
                         p.ellipse(enemy.x, enemy.y, enemy.size * 0.9, enemy.size * 0.6);
                         
-                        // Center light
+                        // Dome details - tech pattern
+                        p.fill(150);
+                        p.arc(enemy.x, enemy.y, enemy.size * 0.8, enemy.size * 0.5, p.PI, 2*p.PI);
+                        
+                        // Center energy core
                         p.fill(255, 0, 255); // Neon pink
-                        p.ellipse(enemy.x, enemy.y, enemy.size * 0.3, enemy.size * 0.3);
+                        p.ellipse(enemy.x, enemy.y, enemy.size * 0.4, enemy.size * 0.4);
+                        
+                        // Pulsing energy effect
+                        p.fill(255, 100, 255, 100 + p.sin(p.frameCount * 0.2) * 50);
+                        p.ellipse(enemy.x, enemy.y, enemy.size * 0.6, enemy.size * 0.3);
+                        
+                        // Bottom thrusters
+                        p.fill(255, 150, 0, 200);
+                        for (let i = -2; i <= 2; i++) {
+                            let thrusterX = enemy.x + i * (enemy.size * 0.3);
+                            p.ellipse(thrusterX, enemy.y + enemy.size * 0.7, enemy.size * 0.15, enemy.size * 0.2);
+                            
+                            // Thruster flames
+                            if (p.frameCount % 4 < 2) {
+                                p.fill(255, 100, 0, 150);
+                                p.ellipse(thrusterX, enemy.y + enemy.size * 0.9, enemy.size * 0.1, enemy.size * 0.3);
+                            }
+                        }
                         
                     } else if (enemy.type === 1) {
-                        // Type 2: Angular fighter
+                        // Type 2: Angular Battle Cruiser
+                        
                         // Glow effect
                         p.fill(170, 0, 255, 80); // Neon purple glow
                         p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 2, enemy.size);
                         
-                        // Main body
+                        // Main body - angular and aggressive
                         p.fill(50);
+                        // Central body
                         p.beginShape();
-                        p.vertex(enemy.x, enemy.y - enemy.size/2);
-                        p.vertex(enemy.x + enemy.size, enemy.y + enemy.size/2);
-                        p.vertex(enemy.x, enemy.y + enemy.size);
-                        p.vertex(enemy.x - enemy.size, enemy.y + enemy.size/2);
+                        p.vertex(enemy.x, enemy.y - enemy.size * 0.5); // Front point
+                        p.vertex(enemy.x + enemy.size * 0.8, enemy.y); // Right mid
+                        p.vertex(enemy.x + enemy.size * 0.5, enemy.y + enemy.size * 0.8); // Right back
+                        p.vertex(enemy.x - enemy.size * 0.5, enemy.y + enemy.size * 0.8); // Left back
+                        p.vertex(enemy.x - enemy.size * 0.8, enemy.y); // Left mid
                         p.endShape(p.CLOSE);
                         
-                        // Center
-                        p.fill(150);
-                        p.ellipse(enemy.x, enemy.y + enemy.size/3, enemy.size * 0.6, enemy.size * 0.6);
+                        // Armor plating
+                        p.fill(70);
+                        p.quad(
+                            enemy.x, enemy.y - enemy.size * 0.4,
+                            enemy.x + enemy.size * 0.6, enemy.y,
+                            enemy.x + enemy.size * 0.4, enemy.y + enemy.size * 0.4,
+                            enemy.x, enemy.y + enemy.size * 0.1
+                        );
+                        p.quad(
+                            enemy.x, enemy.y - enemy.size * 0.4,
+                            enemy.x - enemy.size * 0.6, enemy.y,
+                            enemy.x - enemy.size * 0.4, enemy.y + enemy.size * 0.4,
+                            enemy.x, enemy.y + enemy.size * 0.1
+                        );
                         
-                        // Accent
+                        // Engine section
+                        p.fill(40);
+                        p.rect(enemy.x - enemy.size * 0.4, enemy.y + enemy.size * 0.5, enemy.size * 0.8, enemy.size * 0.3, 5);
+                        
+                        // Energy core
                         p.fill(170, 0, 255); // Neon purple
-                        p.rect(enemy.x - enemy.size * 0.8, enemy.y + enemy.size/3, enemy.size * 1.6, enemy.size * 0.1);
+                        p.ellipse(enemy.x, enemy.y + enemy.size * 0.2, enemy.size * 0.4, enemy.size * 0.4);
+                        
+                        // Tech details - light strips
+                        p.fill(200);
+                        p.rect(enemy.x - enemy.size * 0.65, enemy.y, enemy.size * 0.3, enemy.size * 0.05, 2);
+                        p.rect(enemy.x + enemy.size * 0.35, enemy.y, enemy.size * 0.3, enemy.size * 0.05, 2);
+                        
+                        // Thruster glow
+                        p.fill(170, 0, 255, 150 + p.sin(p.frameCount * 0.3) * 50);
+                        p.rect(enemy.x - enemy.size * 0.3, enemy.y + enemy.size * 0.8, enemy.size * 0.6, enemy.size * 0.1, 5);
+                        
+                        // Twin cannons
+                        p.fill(90);
+                        p.rect(enemy.x - enemy.size * 0.5, enemy.y + enemy.size * 0.1, enemy.size * 0.2, enemy.size * 0.3, 2);
+                        p.rect(enemy.x + enemy.size * 0.3, enemy.y + enemy.size * 0.1, enemy.size * 0.2, enemy.size * 0.3, 2);
                         
                     } else {
-                        // Type 3: Insectoid ship
+                        // Type 3: Bio-mechanical Craft
+                        
                         // Glow effect
                         p.fill(255, 0, 200, 80); // Neon magenta glow
                         p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 2, enemy.size);
                         
-                        // Main body
+                        // Main body - organic shape
                         p.fill(40);
-                        p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size, enemy.size * 1.2);
+                        p.ellipse(enemy.x, enemy.y + enemy.size/2, enemy.size * 1.2, enemy.size * 1.2);
                         
-                        // Wings
-                        p.fill(100);
+                        // Outer carapace
+                        p.fill(60);
+                        p.beginShape();
+                        for (let angle = 0; angle < p.TWO_PI; angle += p.TWO_PI / 8) {
+                            let r = enemy.size * 0.6 + p.sin(angle * 3 + p.frameCount * 0.05) * 5;
+                            let x = enemy.x + r * p.cos(angle);
+                            let y = enemy.y + enemy.size/2 + r * p.sin(angle);
+                            p.vertex(x, y);
+                        }
+                        p.endShape(p.CLOSE);
+                        
+                        // Wing-like appendages
+                        p.fill(80);
                         p.triangle(
                             enemy.x, enemy.y,
-                            enemy.x - enemy.size, enemy.y - enemy.size/2,
-                            enemy.x - enemy.size/2, enemy.y + enemy.size/2
+                            enemy.x - enemy.size * 1.1, enemy.y - enemy.size * 0.2 + p.sin(p.frameCount * 0.1) * 5,
+                            enemy.x - enemy.size * 0.5, enemy.y + enemy.size * 0.6
                         );
                         p.triangle(
                             enemy.x, enemy.y,
-                            enemy.x + enemy.size, enemy.y - enemy.size/2,
-                            enemy.x + enemy.size/2, enemy.y + enemy.size/2
+                            enemy.x + enemy.size * 1.1, enemy.y - enemy.size * 0.2 + p.sin(p.frameCount * 0.1) * 5,
+                            enemy.x + enemy.size * 0.5, enemy.y + enemy.size * 0.6
                         );
                         
-                        // Eyes
+                        // Central 'eye' - pulsing organic energy
                         p.fill(255, 0, 200); // Neon magenta
-                        p.ellipse(enemy.x - enemy.size/4, enemy.y, enemy.size * 0.2, enemy.size * 0.2);
-                        p.ellipse(enemy.x + enemy.size/4, enemy.y, enemy.size * 0.2, enemy.size * 0.2);
+                        p.ellipse(enemy.x, enemy.y, enemy.size * 0.5, enemy.size * 0.5);
+                        
+                        // Inner eye detail
+                        p.fill(255, 100, 225);
+                        p.ellipse(enemy.x, enemy.y, enemy.size * 0.3, enemy.size * 0.3);
+                        
+                        // Vein-like patterns
+                        p.stroke(255, 0, 200, 150);
+                        p.strokeWeight(2);
+                        for (let i = 0; i < 5; i++) {
+                            let angle = p.TWO_PI / 5 * i + p.frameCount * 0.01;
+                            p.line(
+                                enemy.x, enemy.y,
+                                enemy.x + p.cos(angle) * enemy.size * 0.8,
+                                enemy.y + enemy.size/2 + p.sin(angle) * enemy.size * 0.8
+                            );
+                        }
+                        p.noStroke();
+                        
+                        // Smaller sensory appendages
+                        p.fill(70);
+                        p.ellipse(enemy.x - enemy.size * 0.4, enemy.y - enemy.size * 0.2, enemy.size * 0.15, enemy.size * 0.3);
+                        p.ellipse(enemy.x + enemy.size * 0.4, enemy.y - enemy.size * 0.2, enemy.size * 0.15, enemy.size * 0.3);
+                        
+                        // Glow tips
+                        p.fill(255, 100, 200);
+                        p.ellipse(enemy.x - enemy.size * 0.4, enemy.y - enemy.size * 0.35, enemy.size * 0.1, enemy.size * 0.1);
+                        p.ellipse(enemy.x + enemy.size * 0.4, enemy.y - enemy.size * 0.35, enemy.size * 0.1, enemy.size * 0.1);
                     }
                 }
             }
@@ -497,6 +694,57 @@ const GameBackground = () => {
                 }
             }
 
+            function drawAlienHeads() {
+                for (let alien of alienHeads) {
+                    // Head outer glow
+                    p.fill(0, 255, 0, 80 + p.sin(p.frameCount * 0.2) * 30);
+                    p.ellipse(alien.x, alien.y, alien.size * 1.2, alien.size * 1.2);
+                    
+                    // Alien head - neon green with pulsing effect
+                    p.fill(0, 255, 0, 200 + p.sin(p.frameCount * 0.1 + alien.pulseOffset) * 55);
+                    p.ellipse(alien.x, alien.y, alien.size, alien.size * 1.1);
+                    
+                    // Top of head
+                    p.fill(0, 230, 0);
+                    p.arc(alien.x, alien.y - alien.size * 0.05, alien.size, alien.size * 0.9, p.PI, 2*p.PI);
+                    
+                    // Eyes - INCREASED SIZE AND MADE GREY WITH 3D SHADING
+                    const eyeSize = alien.size * 0.4;
+                    const eyeY = alien.y - alien.size * 0.15;
+                    
+                    // Eye sockets
+                    p.fill(0, 150, 0);
+                    p.ellipse(alien.x - alien.size * 0.3, eyeY, eyeSize * 1.3, eyeSize * 1.3);
+                    p.ellipse(alien.x + alien.size * 0.3, eyeY, eyeSize * 1.3, eyeSize * 1.3);
+                    
+                    // 3D Eyes with gradient shading
+                    // Outer eye - dark grey
+                    p.fill(40);
+                    p.ellipse(alien.x - alien.size * 0.3, eyeY, eyeSize, eyeSize);
+                    p.ellipse(alien.x + alien.size * 0.3, eyeY, eyeSize, eyeSize);
+                    
+                    // Mid-eye - medium grey
+                    p.fill(80);
+                    p.ellipse(alien.x - alien.size * 0.3, eyeY, eyeSize * 0.75, eyeSize * 0.75);
+                    p.ellipse(alien.x + alien.size * 0.3, eyeY, eyeSize * 0.75, eyeSize * 0.75);
+                    
+                    // Inner eye - light grey with slight shine
+                    p.fill(120);
+                    p.ellipse(alien.x - alien.size * 0.3, eyeY, eyeSize * 0.5, eyeSize * 0.5);
+                    p.ellipse(alien.x + alien.size * 0.3, eyeY, eyeSize * 0.5, eyeSize * 0.5);
+                    
+                    // Eye shine - small white highlight
+                    p.fill(200);
+                    p.ellipse(alien.x - alien.size * 0.3 - eyeSize * 0.1, eyeY - eyeSize * 0.1, eyeSize * 0.15, eyeSize * 0.15);
+                    p.ellipse(alien.x + alien.size * 0.3 - eyeSize * 0.1, eyeY - eyeSize * 0.1, eyeSize * 0.15, eyeSize * 0.15);
+                    
+                    // Tiny mouth - just a small black line
+                    p.fill(0);
+                    p.noStroke();
+                    p.ellipse(alien.x, alien.y + alien.size * 0.2, alien.size * 0.1, alien.size * 0.03);
+                }
+            }
+
             function drawUI() {
                 p.fill(255);
                 p.textSize(16);
@@ -617,6 +865,76 @@ const GameBackground = () => {
                     powerupSpawnTimer = 900; // Reset to 15 seconds (changed from 300)
                 }
                 
+                // Spawn alien heads
+                alienSpawnTimer--;
+                if (alienSpawnTimer <= 0) {
+                    spawnAlienHead();
+                    alienSpawnTimer = p.floor(p.random(120, 300)); // Random time between 2-5 seconds
+                }
+                
+                // Update alien heads
+                for (let i = alienHeads.length - 1; i >= 0; i--) {
+                    let alien = alienHeads[i];
+                    
+                    // Update position with randomized movement
+                    alien.x += Math.sin(p.frameCount * 0.05 + alien.id) * 3;
+                    alien.y += alien.speedY;
+                    
+                    // Occasionally change Y speed for more unpredictable movement
+                    if (p.frameCount % 30 === 0 && p.random() > 0.7) {
+                        alien.speedY = p.random(2, 5);
+                    }
+                    
+                    // Check for collision with player
+                    let alienCircle = {
+                        x: alien.x,
+                        y: alien.y,
+                        radius: alien.size / 2
+                    };
+                    
+                    let playerHitBox = { 
+                        left: playerX - playerWidth/2, 
+                        right: playerX + playerWidth/2, 
+                        top: playerY, 
+                        bottom: playerY + playerHeight 
+                    };
+                    
+                    if (circleRectangleOverlap(alienCircle, playerHitBox)) {
+                        // Remove alien
+                        alienHeads.splice(i, 1);
+                        
+                        // Create unique effect on collision
+                        createAlienHitEffect(alien.x, alien.y);
+                        
+                        // Apply damage if not shielded
+                        if (activePowerups.shield <= 0) {
+                            playerHitEffect = 30;
+                            lives--;
+                            
+                            if (lives <= 0) {
+                                // Create big explosion for player death
+                                for (let j = 0; j < 5; j++) {
+                                    explosions.push({
+                                        x: playerX + p.random(-playerWidth, playerWidth),
+                                        y: playerY + p.random(-playerHeight, playerHeight),
+                                        size: 70 + p.random(20),
+                                        frame: p.random(5)
+                                    });
+                                }
+                                
+                                isGameOver = true;
+                            }
+                        }
+                        
+                        continue;
+                    }
+                    
+                    // Remove if offscreen
+                    if (alien.y > p.height + 50) {
+                        alienHeads.splice(i, 1);
+                    }
+                }
+                
                 // Move powerups down the screen
                 for (let i = powerups.length - 1; i >= 0; i--) {
                     let powerup = powerups[i];
@@ -717,6 +1035,31 @@ const GameBackground = () => {
                 for (let i = playerBullets.length - 1; i >= 0; i--) {
                     let bullet = playerBullets[i];
                     let bulletBB = { left: bullet.x - 1, right: bullet.x + 1, top: bullet.y - 5, bottom: bullet.y + 5 };
+                    
+                    // Check for collisions with alien heads
+                    for (let j = alienHeads.length - 1; j >= 0; j--) {
+                        let alien = alienHeads[j];
+                        let alienCircle = {
+                            x: alien.x,
+                            y: alien.y,
+                            radius: alien.size / 2
+                        };
+                        
+                        if (circleRectangleOverlap(alienCircle, bulletBB)) {
+                            playerBullets.splice(i, 1);
+                            alienHeads.splice(j, 1);
+                            
+                            // Create alien hit effect
+                            createAlienHitEffect(alien.x, alien.y);
+                            
+                            // Add score
+                            score += 15;
+                            break;
+                        }
+                    }
+                    
+                    // Skip if bullet was already used
+                    if (i >= playerBullets.length) continue;
                     
                     for (let j = enemies.length - 1; j >= 0; j--) {
                         let enemy = enemies[j];
@@ -847,7 +1190,6 @@ const GameBackground = () => {
                 }
             }
 
-
             function rectanglesOverlap(r1, r2) {
                 return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
             }
@@ -856,27 +1198,89 @@ const GameBackground = () => {
                 for (let i = explosions.length - 1; i >= 0; i--) {
                     let exp = explosions[i];
                     
-                    // Draw explosion
-                    p.noStroke();
-                    
-                    // Outer glow
-                    p.fill(255, 100, 0, 150 - exp.frame * 2);
-                    p.ellipse(exp.x, exp.y, exp.size * (1 + exp.frame/10), exp.size * (1 + exp.frame/10));
-                    
-                    // Inner bright part
-                    p.fill(255, 200, 0, 200 - exp.frame * 3);
-                    p.ellipse(exp.x, exp.y, exp.size * (0.7 + exp.frame/15), exp.size * (0.7 + exp.frame/15));
-                    
-                    // Core
-                    p.fill(255);
-                    p.ellipse(exp.x, exp.y, exp.size * (0.3 + exp.frame/30), exp.size * (0.3 + exp.frame/30));
-                    
-                    // Update explosion frame
-                    exp.frame++;
-                    
-                    // Remove old explosions
-                    if (exp.frame > 30) {
-                        explosions.splice(i, 1);
+                    // Alien hit special effect
+                    if (exp.type === 'alien') {
+                        p.push();
+                        p.translate(exp.x, exp.y);
+                        p.rotate(p.radians(exp.rotation + exp.frame * 3));
+                        
+                        // Green psychic waves - hexagon shape that expands and fades
+                        p.noFill();
+                        p.strokeWeight(3);
+                        p.stroke(0, 255, 100, 200 - exp.frame * 6);
+                        
+                        let radius = exp.size * (1 + exp.frame/10);
+                        p.beginShape();
+                        for (let j = 0; j < 6; j++) {
+                            let angle = j * p.TWO_PI / 6;
+                            let px = Math.cos(angle) * radius;
+                            let py = Math.sin(angle) * radius;
+                            p.vertex(px, py);
+                        }
+                        p.endShape(p.CLOSE);
+                        
+                        p.pop();
+                        
+                        // Update frame
+                        exp.frame++;
+                        
+                        // Remove old explosions
+                        if (exp.frame > 30) {
+                            explosions.splice(i, 1);
+                        }
+                    }
+                    // Alien particle effect
+                    else if (exp.type === 'alienParticle') {
+                        // Update position
+                        exp.x += exp.vx;
+                        exp.y += exp.vy;
+                        
+                        // Slow down particles
+                        exp.vx *= 0.95;
+                        exp.vy *= 0.95;
+                        
+                        // Draw particle
+                        p.noStroke();
+                        let alpha = 255 * (exp.life / exp.maxLife);
+                        p.fill(0, 255, 0, alpha);
+                        p.ellipse(exp.x, exp.y, exp.size * (exp.life / exp.maxLife), exp.size * (exp.life / exp.maxLife));
+                        
+                        // Inner glow
+                        p.fill(100, 255, 100, alpha * 0.7);
+                        p.ellipse(exp.x, exp.y, exp.size * 0.6 * (exp.life / exp.maxLife), exp.size * 0.6 * (exp.life / exp.maxLife));
+                        
+                        // Update life
+                        exp.life--;
+                        
+                        // Remove dead particles
+                        if (exp.life <= 0) {
+                            explosions.splice(i, 1);
+                        }
+                    }
+                    // Regular explosion
+                    else {
+                        // Draw explosion
+                        p.noStroke();
+                        
+                        // Outer glow
+                        p.fill(255, 100, 0, 150 - exp.frame * 2);
+                        p.ellipse(exp.x, exp.y, exp.size * (1 + exp.frame/10), exp.size * (1 + exp.frame/10));
+                        
+                        // Inner bright part
+                        p.fill(255, 200, 0, 200 - exp.frame * 3);
+                        p.ellipse(exp.x, exp.y, exp.size * (0.7 + exp.frame/15), exp.size * (0.7 + exp.frame/15));
+                        
+                        // Core
+                        p.fill(255);
+                        p.ellipse(exp.x, exp.y, exp.size * (0.3 + exp.frame/30), exp.size * (0.3 + exp.frame/30));
+                        
+                        // Update explosion frame
+                        exp.frame++;
+                        
+                        // Remove old explosions
+                        if (exp.frame > 30) {
+                            explosions.splice(i, 1);
+                        }
                     }
                 }
                 
@@ -891,19 +1295,14 @@ const GameBackground = () => {
                 }
             }
 
-            // The below functions are kept for future use but currently not actively used
-            // eslint-disable-next-line no-unused-vars
-            function spawnRandomPowerup() {
-                const types = ['shield', 'tripleShot', 'speedBoost'];
-                const type = types[Math.floor(p.random(types.length))];
-                
-                console.log("Spawning powerup:", type); // Debug message
-                
-                powerups.push({
+            function spawnAlienHead() {
+                alienHeads.push({
+                    id: p.random(1000), // For unique movement patterns
                     x: p.random(100, p.width - 100),
                     y: -50,
-                    type: type,
-                    speed: p.random(1, 3) // Variable speed
+                    size: p.random(40, 60),
+                    speedY: p.random(2, 4),
+                    pulseOffset: p.random(0, 10)
                 });
             }
 
@@ -919,41 +1318,40 @@ const GameBackground = () => {
                 });
                 console.log("Created powerup:", type, "at", x, y);
             }
-
-            // Helper function to draw regular polygons
-            // eslint-disable-next-line no-unused-vars
-            function drawPolygon(x, y, radius, sides, rotation = 0) {
-                p.beginShape();
-                for (let i = 0; i < sides; i++) {
-                    let angle = p.radians(rotation + i * 360 / sides);
-                    let vx = x + cos(angle) * radius;
-                    let vy = y + sin(angle) * radius;
-                    p.vertex(vx, vy);
+            
+            function createAlienHitEffect(x, y) {
+                // Create unique alien hit effect - green psychic waves
+                for (let i = 0; i < 3; i++) {
+                    let size = 40 + i * 20;
+                    
+                    explosions.push({
+                        x: x,
+                        y: y,
+                        size: size,
+                        frame: 0,
+                        type: 'alien',
+                        rotation: p.random(0, 360)
+                    });
                 }
-                p.endShape(p.CLOSE);
-            }
-            
-            // Helper function to draw a star
-            // eslint-disable-next-line no-unused-vars
-            function drawStar(x, y, innerRadius, outerRadius, points) {
-                p.beginShape();
-                for (let i = 0; i < points * 2; i++) {
-                    let angle = p.radians(i * 180 / points);
-                    let radius = i % 2 === 0 ? outerRadius : innerRadius;
-                    let vx = x + cos(angle) * radius;
-                    let vy = y + sin(angle) * radius;
-                    p.vertex(vx, vy);
+                
+                // Green particles flying outward
+                for (let i = 0; i < 20; i++) {
+                    let angle = p.random(0, p.TWO_PI);
+                    let speed = p.random(2, 6);
+                    let life = p.random(20, 40);
+                    
+                    explosions.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        size: p.random(5, 15),
+                        frame: 0,
+                        type: 'alienParticle',
+                        life: life,
+                        maxLife: life
+                    });
                 }
-                p.endShape(p.CLOSE);
-            }
-            
-            // Helper functions for drawPolygon
-            function cos(angle) {
-                return Math.cos(angle);
-            }
-            
-            function sin(angle) {
-                return Math.sin(angle);
             }
 
             p.windowResized = () => {
