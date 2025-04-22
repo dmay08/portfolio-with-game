@@ -57,7 +57,7 @@ function App() {
             <Content className="content-wrapper">
                 <HeroSection className="hero-section">
                     <Heading className="hero-heading">Hello,<br />I'm Danny</Heading>
-                    <Description className="hero-description">I'm a software developer</Description>
+                    <Description className="hero-description">Lead Frontend Developer <br />at Lightstorm Entertainment</Description>
                     <Button className="projects-button">
                         View Projects
                     </Button>

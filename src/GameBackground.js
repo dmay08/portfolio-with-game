@@ -584,6 +584,19 @@ const GameBackground = () => {
                 return (distanceX * distanceX + distanceY * distanceY) < (circle.radius * circle.radius);
             }
 
+            function pointInTriangle(px, py, x1, y1, x2, y2, x3, y3) {
+                // Calculate area of the triangle
+                const areaOrig = Math.abs((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1));
+                
+                // Calculate area of 3 triangles made between the point and each corner
+                const area1 = Math.abs((x1 - px) * (y2 - py) - (x2 - px) * (y1 - py));
+                const area2 = Math.abs((x2 - px) * (y3 - py) - (x3 - px) * (y2 - py));
+                const area3 = Math.abs((x3 - px) * (y1 - py) - (x1 - px) * (y3 - py));
+                
+                // Point is inside if sum of the three areas equals the original area
+                return Math.abs(area1 + area2 + area3 - areaOrig) < 0.01;
+            }
+
             function updateGame() {
                 if (isGameOver) return;
                 
@@ -743,12 +756,45 @@ const GameBackground = () => {
                     }
                 }
                 
-                // Check player collision with enemy bullets
-                let playerBB = { left: playerX - playerWidth, right: playerX + playerWidth, top: playerY - playerHeight/2, bottom: playerY + playerHeight };
+                // Updated player collision with enemy bullets
+                // Main ship body collision
+                let playerMainBB = { 
+                    left: playerX - playerWidth/2, 
+                    right: playerX + playerWidth/2, 
+                    top: playerY, 
+                    bottom: playerY + playerHeight 
+                };
+            
                 for (let i = enemyBullets.length - 1; i >= 0; i--) {
                     let bullet = enemyBullets[i];
-                    let bulletBB = { left: bullet.x - 1, right: bullet.x + 1, top: bullet.y - 5, bottom: bullet.y + 5 };
-                    if (rectanglesOverlap(bulletBB, playerBB)) {
+                    let bulletBB = { 
+                        left: bullet.x - 5, // Increased bullet hitbox slightly
+                        right: bullet.x + 5, 
+                        top: bullet.y - 5, 
+                        bottom: bullet.y + 5 
+                    };
+                    
+                    // Check main ship body with rectangle collision
+                    let mainBodyHit = rectanglesOverlap(bulletBB, playerMainBB);
+                    
+                    // Check left wing with triangle collision
+                    let leftWingHit = pointInTriangle(
+                        bullet.x, bullet.y,
+                        playerX - playerWidth/4, playerY + playerHeight/2,
+                        playerX - playerWidth*1.2, playerY + playerHeight*0.7,
+                        playerX - playerWidth/2, playerY + playerHeight*0.9
+                    );
+                    
+                    // Check right wing with triangle collision
+                    let rightWingHit = pointInTriangle(
+                        bullet.x, bullet.y,
+                        playerX + playerWidth/4, playerY + playerHeight/2,
+                        playerX + playerWidth*1.2, playerY + playerHeight*0.7,
+                        playerX + playerWidth/2, playerY + playerHeight*0.9
+                    );
+                    
+                    // If any part of the ship is hit
+                    if (mainBodyHit || leftWingHit || rightWingHit) {
                         enemyBullets.splice(i, 1);
                         
                         // Create hit explosion
