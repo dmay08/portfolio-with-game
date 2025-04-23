@@ -903,8 +903,13 @@ const GameBackground = () => {
                         // Remove alien
                         alienHeads.splice(i, 1);
                         
-                        // Create unique effect on collision
-                        createAlienHitEffect(alien.x, alien.y);
+                        // Use same explosion as when enemy bullets hit player
+                        explosions.push({
+                            x: alien.x,
+                            y: alien.y,
+                            size: 40,
+                            frame: 0
+                        });
                         
                         // Apply damage if not shielded
                         if (activePowerups.shield <= 0) {
@@ -1031,7 +1036,7 @@ const GameBackground = () => {
                     enemyDirection *= -1;
                 }
                 
-                // Updated bullet-enemy collision with circle-rectangle collision detection
+                // Update bullet-enemy collision
                 for (let i = playerBullets.length - 1; i >= 0; i--) {
                     let bullet = playerBullets[i];
                     let bulletBB = { left: bullet.x - 1, right: bullet.x + 1, top: bullet.y - 5, bottom: bullet.y + 5 };
@@ -1064,35 +1069,25 @@ const GameBackground = () => {
                     for (let j = enemies.length - 1; j >= 0; j--) {
                         let enemy = enemies[j];
                         
-                        // Create a circle representation for enemy instead of a small rectangle
+                        // Create a circle representation for enemy
                         let enemyCircle = { 
                             x: enemy.x, 
-                            y: enemy.y + enemy.size/4, // Adjust center point to match visual center
-                            radius: enemy.size * 0.9   // Make radius match the visual size of enemy ships
+                            y: enemy.y + enemy.size/4,
+                            radius: enemy.size * 0.9
                         };
                         
                         // Use circle-rectangle collision detection
                         if (circleRectangleOverlap(enemyCircle, bulletBB)) {
                             playerBullets.splice(i, 1);
                             
-                            // Create explosion at impact point
-                            explosions.push({
-                                x: bullet.x,
-                                y: bullet.y,
-                                size: 30,
-                                frame: 0
-                            });
+                            // Create neon hit effect at impact point
+                            createEnemyNeonHitEffect(bullet.x, bullet.y);
                             
                             enemies.splice(j, 1);
                             score += 10;
                             
-                            // Create larger explosion for enemy death
-                            explosions.push({
-                                x: enemy.x,
-                                y: enemy.y,
-                                size: 60,
-                                frame: 0
-                            });
+                            // Create neon hit effect at enemy center
+                            createEnemyNeonHitEffect(enemy.x, enemy.y);
                             
                             break;
                         }
@@ -1111,36 +1106,22 @@ const GameBackground = () => {
                 for (let i = enemyBullets.length - 1; i >= 0; i--) {
                     let bullet = enemyBullets[i];
                     let bulletBB = { 
-                        left: bullet.x - 5, // Increased bullet hitbox slightly
+                        left: bullet.x - 5,
                         right: bullet.x + 5, 
                         top: bullet.y - 5, 
                         bottom: bullet.y + 5 
                     };
                     
-                    // Check main ship body with rectangle collision
+                    // Check for collision with player
                     let mainBodyHit = rectanglesOverlap(bulletBB, playerMainBB);
-                    
-                    // Check left wing with triangle collision
-                    let leftWingHit = pointInTriangle(
-                        bullet.x, bullet.y,
-                        playerX - playerWidth/4, playerY + playerHeight/2,
-                        playerX - playerWidth*1.2, playerY + playerHeight*0.7,
-                        playerX - playerWidth/2, playerY + playerHeight*0.9
-                    );
-                    
-                    // Check right wing with triangle collision
-                    let rightWingHit = pointInTriangle(
-                        bullet.x, bullet.y,
-                        playerX + playerWidth/4, playerY + playerHeight/2,
-                        playerX + playerWidth*1.2, playerY + playerHeight*0.7,
-                        playerX + playerWidth/2, playerY + playerHeight*0.9
-                    );
+                    let leftWingHit = pointInTriangle(bullet.x, bullet.y, playerX - playerWidth/4, playerY + playerHeight/2, playerX - playerWidth*1.2, playerY + playerHeight*0.7, playerX - playerWidth/2, playerY + playerHeight*0.9);
+                    let rightWingHit = pointInTriangle(bullet.x, bullet.y, playerX + playerWidth/4, playerY + playerHeight/2, playerX + playerWidth*1.2, playerY + playerHeight*0.7, playerX + playerWidth/2, playerY + playerHeight*0.9);
                     
                     // If any part of the ship is hit
                     if (mainBodyHit || leftWingHit || rightWingHit) {
                         enemyBullets.splice(i, 1);
                         
-                        // Create hit explosion
+                        // Create hit explosion - this is what we need to match for alien collisions
                         explosions.push({
                             x: bullet.x,
                             y: bullet.y,
@@ -1206,8 +1187,8 @@ const GameBackground = () => {
                         
                         // Green psychic waves - hexagon shape that expands and fades
                         p.noFill();
-                        p.strokeWeight(3);
-                        p.stroke(0, 255, 100, 200 - exp.frame * 6);
+                        p.strokeWeight(2); // Thinner stroke
+                        p.stroke(0, 255, 100, 200 - exp.frame * 10); // Fades faster
                         
                         let radius = exp.size * (1 + exp.frame/10);
                         p.beginShape();
@@ -1224,8 +1205,46 @@ const GameBackground = () => {
                         // Update frame
                         exp.frame++;
                         
-                        // Remove old explosions
-                        if (exp.frame > 30) {
+                        // Remove old explosions - shorter duration
+                        if (exp.frame > 20) {
+                            explosions.splice(i, 1);
+                        }
+                    }
+                    // Neon enemy hit effect - new type
+                    else if (exp.type === 'neonEnemyHit') {
+                        // Pulsing neon plasma effect
+                        p.noStroke();
+                        
+                        // Outer glow - bright pink/purple neon
+                        let alpha = 150 - exp.frame * 7;
+                        p.fill(255, 50, 255, alpha);
+                        let pulseSize = exp.size * (1 + exp.frame/8) + Math.sin(exp.frame * 0.3 + exp.pulseOffset) * 3;
+                        p.ellipse(exp.x, exp.y, pulseSize, pulseSize);
+                        
+                        // Inner core - brighter
+                        p.fill(255, 150, 255, alpha + 50);
+                        p.ellipse(exp.x, exp.y, pulseSize * 0.6, pulseSize * 0.6);
+                        
+                        // Electric arcs - small lines radiating outward
+                        if (exp.frame < 10) {
+                            p.stroke(255, 200, 255, alpha + 50);
+                            p.strokeWeight(1);
+                            for (let j = 0; j < 5; j++) {
+                                let angle = p.random(0, p.TWO_PI);
+                                let len = p.random(5, 15);
+                                p.line(
+                                    exp.x, exp.y,
+                                    exp.x + Math.cos(angle) * len,
+                                    exp.y + Math.sin(angle) * len
+                                );
+                            }
+                        }
+                        
+                        // Update frame
+                        exp.frame++;
+                        
+                        // Remove when faded
+                        if (exp.frame > 20) {
                             explosions.splice(i, 1);
                         }
                     }
@@ -1248,6 +1267,34 @@ const GameBackground = () => {
                         // Inner glow
                         p.fill(100, 255, 100, alpha * 0.7);
                         p.ellipse(exp.x, exp.y, exp.size * 0.6 * (exp.life / exp.maxLife), exp.size * 0.6 * (exp.life / exp.maxLife));
+                        
+                        // Update life
+                        exp.life--;
+                        
+                        // Remove dead particles
+                        if (exp.life <= 0) {
+                            explosions.splice(i, 1);
+                        }
+                    }
+                    // Neon enemy particle effect - new type
+                    else if (exp.type === 'neonEnemyParticle') {
+                        // Update position
+                        exp.x += exp.vx;
+                        exp.y += exp.vy;
+                        
+                        // Slow down particles
+                        exp.vx *= 0.95;
+                        exp.vy *= 0.95;
+                        
+                        // Draw particle - bright pink/purple neon
+                        p.noStroke();
+                        let alpha = 255 * (exp.life / exp.maxLife);
+                        p.fill(255, 100, 255, alpha);
+                        p.ellipse(exp.x, exp.y, exp.size * (exp.life / exp.maxLife), exp.size * (exp.life / exp.maxLife));
+                        
+                        // Inner bright core
+                        p.fill(255, 200, 255, alpha * 0.8);
+                        p.ellipse(exp.x, exp.y, exp.size * 0.5 * (exp.life / exp.maxLife), exp.size * 0.5 * (exp.life / exp.maxLife));
                         
                         // Update life
                         exp.life--;
@@ -1320,9 +1367,9 @@ const GameBackground = () => {
             }
             
             function createAlienHitEffect(x, y) {
-                // Create unique alien hit effect - green psychic waves
-                for (let i = 0; i < 3; i++) {
-                    let size = 40 + i * 20;
+                // Create unique alien hit effect - green psychic waves - SMALLER SIZE
+                for (let i = 0; i < 2; i++) { // Reduced from 3 to 2 waves
+                    let size = 25 + i * 10; // Smaller size (was 40 + i * 20)
                     
                     explosions.push({
                         x: x,
@@ -1334,20 +1381,54 @@ const GameBackground = () => {
                     });
                 }
                 
-                // Green particles flying outward
-                for (let i = 0; i < 20; i++) {
+                // Green particles flying outward - FEWER & SMALLER
+                for (let i = 0; i < 10; i++) { // Reduced from 20 to 10 particles
                     let angle = p.random(0, p.TWO_PI);
-                    let speed = p.random(2, 6);
-                    let life = p.random(20, 40);
+                    let speed = p.random(1, 4); // Slower particles
+                    let life = p.random(15, 25); // Shorter life
                     
                     explosions.push({
                         x: x,
                         y: y,
                         vx: Math.cos(angle) * speed,
                         vy: Math.sin(angle) * speed,
-                        size: p.random(5, 15),
+                        size: p.random(3, 8), // Smaller size
                         frame: 0,
                         type: 'alienParticle',
+                        life: life,
+                        maxLife: life
+                    });
+                }
+            }
+
+            // New function for neon enemy hit effect
+            function createEnemyNeonHitEffect(x, y) {
+                // Neon plasma pulse effect
+                for (let i = 0; i < 2; i++) {
+                    explosions.push({
+                        x: x,
+                        y: y,
+                        size: 15 + i * 10, // Small size
+                        frame: 0,
+                        type: 'neonEnemyHit',
+                        pulseOffset: p.random(0, 10)
+                    });
+                }
+                
+                // Few neon particles
+                for (let i = 0; i < 8; i++) {
+                    let angle = p.random(0, p.TWO_PI);
+                    let speed = p.random(1, 3);
+                    let life = p.random(10, 20);
+                    
+                    explosions.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        size: p.random(2, 6),
+                        frame: 0,
+                        type: 'neonEnemyParticle',
                         life: life,
                         maxLife: life
                     });
