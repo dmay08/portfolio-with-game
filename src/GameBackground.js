@@ -39,6 +39,7 @@ const GameBackground = () => {
             let powerGainEffects = [];
             let alienHeads = []; // Array to track alien heads
             let alienSpawnTimer = 180; // Spawn a new alien head every 3 seconds
+            let isMobileDevice = false; // Flag to track if it's a mobile device
 
             p.setup = () => {
                 p.createCanvas(p.windowWidth, p.windowHeight).parent(sketchRef.current);
@@ -62,7 +63,11 @@ const GameBackground = () => {
                 alienHeads = [];
                 alienSpawnTimer = p.floor(p.random(60, 180));
                 
+                // Detect if it's a mobile device
+                isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || p.windowWidth <= 768;
+                
                 console.log("First powerup will appear in", Math.ceil(powerupSpawnTimer / 60), "seconds");
+                console.log("Is mobile device:", isMobileDevice);
             };
 
             function spawnEnemies() {
@@ -775,25 +780,116 @@ const GameBackground = () => {
             }
 
             function drawButtons() {
-                p.fill(100, 100, 100, 150);
+                // Only draw buttons on mobile devices
+                if (!isMobileDevice) return;
+                
+                // Create a semi-transparent background panel for the buttons
+                p.fill(0, 0, 30, 180);
                 p.noStroke();
-                p.rect(0, p.height - buttonSize, buttonSize, buttonSize);
-                p.rect(p.width - buttonSize, p.height - buttonSize, buttonSize, buttonSize);
-                p.rect(p.width / 2 - buttonSize / 2, p.height - buttonSize, buttonSize, buttonSize);
+                p.rect(0, p.height - buttonSize - 10, p.width, buttonSize + 10, 10, 10, 0, 0);
+                
+                // Left button with neon styling
+                const leftButtonX = buttonSize/2;
+                const buttonY = p.height - buttonSize/2 - 5;
+                
+                // Glow effect
+                p.fill(0, 150, 255, 80);
+                p.ellipse(leftButtonX, buttonY, buttonSize * 1.2, buttonSize * 1.2);
+                
+                // Main button body
+                p.fill(20, 20, 50);
+                p.ellipse(leftButtonX, buttonY, buttonSize, buttonSize);
+                
+                // Button edge highlight
+                p.noFill();
+                p.strokeWeight(2);
+                p.stroke(0, 150, 255);
+                p.ellipse(leftButtonX, buttonY, buttonSize, buttonSize);
+                
+                // Left arrow icon
+                p.fill(0, 200, 255);
+                p.noStroke();
+                p.triangle(
+                    leftButtonX - 15, buttonY,
+                    leftButtonX + 5, buttonY - 20,
+                    leftButtonX + 5, buttonY + 20
+                );
+                
+                // Right button with neon styling
+                const rightButtonX = p.width - buttonSize/2;
+                
+                // Glow effect
+                p.fill(0, 150, 255, 80);
+                p.ellipse(rightButtonX, buttonY, buttonSize * 1.2, buttonSize * 1.2);
+                
+                // Main button body
+                p.fill(20, 20, 50);
+                p.ellipse(rightButtonX, buttonY, buttonSize, buttonSize);
+                
+                // Button edge highlight
+                p.noFill();
+                p.strokeWeight(2);
+                p.stroke(0, 150, 255);
+                p.ellipse(rightButtonX, buttonY, buttonSize, buttonSize);
+                
+                // Right arrow icon
+                p.fill(0, 200, 255);
+                p.noStroke();
+                p.triangle(
+                    rightButtonX + 15, buttonY,
+                    rightButtonX - 5, buttonY - 20,
+                    rightButtonX - 5, buttonY + 20
+                );
+                
+                // Shoot button with neon styling - make it more pink/purple to stand out
+                const shootButtonX = p.width / 2;
+                
+                // Glow effect
+                p.fill(255, 50, 255, 80);
+                p.ellipse(shootButtonX, buttonY, buttonSize * 1.3, buttonSize * 1.3);
+                
+                // Main button body
+                p.fill(30, 10, 40);
+                p.ellipse(shootButtonX, buttonY, buttonSize * 1.1, buttonSize * 1.1);
+                
+                // Pulsing effect for the shoot button
+                const pulseSize = buttonSize * (1 + 0.05 * Math.sin(p.frameCount * 0.1));
+                p.noFill();
+                p.strokeWeight(3);
+                p.stroke(255, 50, 255);
+                p.ellipse(shootButtonX, buttonY, pulseSize, pulseSize);
+                
+                // Inner circle
+                p.noStroke();
+                p.fill(255, 100, 255);
+                p.ellipse(shootButtonX, buttonY, buttonSize * 0.6, buttonSize * 0.6);
+                
+                // Center dot
                 p.fill(255);
-                p.textAlign(p.CENTER, p.CENTER);
-                p.textSize(16);
-                p.text("Left", buttonSize / 2, p.height - buttonSize / 2);
-                p.text("Right", p.width - buttonSize / 2, p.height - buttonSize / 2);
-                p.text("Shoot", p.width / 2, p.height - buttonSize / 2);
+                p.ellipse(shootButtonX, buttonY, buttonSize * 0.2, buttonSize * 0.2);
             }
 
             function handleInput() {
                 if (isGameOver) return;
                 
-                let moveLeft = p.keyIsDown(p.LEFT_ARROW) || (p.mouseIsPressed && p.mouseX < buttonSize && p.mouseY > p.height - buttonSize);
-                let moveRight = p.keyIsDown(p.RIGHT_ARROW) || (p.mouseIsPressed && p.mouseX > p.width - buttonSize && p.mouseY > p.height - buttonSize);
-                let shoot = p.keyIsDown(32) || (p.mouseIsPressed && p.mouseX > p.width / 2 - buttonSize / 2 && p.mouseX < p.width / 2 + buttonSize / 2 && p.mouseY > p.height - buttonSize);
+                let moveLeft, moveRight, shoot;
+                
+                if (isMobileDevice) {
+                    // Mobile controls
+                    const buttonY = p.height - buttonSize/2 - 5;
+                    const leftButtonX = buttonSize/2;
+                    const rightButtonX = p.width - buttonSize/2;
+                    const shootButtonX = p.width / 2;
+                    
+                    moveLeft = p.mouseIsPressed && p.dist(p.mouseX, p.mouseY, leftButtonX, buttonY) < buttonSize/2;
+                    moveRight = p.mouseIsPressed && p.dist(p.mouseX, p.mouseY, rightButtonX, buttonY) < buttonSize/2;
+                    shoot = p.mouseIsPressed && p.dist(p.mouseX, p.mouseY, shootButtonX, buttonY) < buttonSize/2;
+                } else {
+                    // Desktop controls - keyboard only
+                    moveLeft = p.keyIsDown(p.LEFT_ARROW) || p.keyIsDown(65); // Left arrow or 'A'
+                    moveRight = p.keyIsDown(p.RIGHT_ARROW) || p.keyIsDown(68); // Right arrow or 'D'
+                    shoot = p.keyIsDown(32) || p.keyIsDown(87); // Spacebar or 'W'
+                }
                 
                 // Speed boost powerup affects movement speed
                 const moveSpeed = activePowerups.speedBoost > 0 ? 12 : 7;
@@ -1439,6 +1535,9 @@ const GameBackground = () => {
                 p.resizeCanvas(p.windowWidth, p.windowHeight);
                 playerX = p.width / 2;
                 playerY = p.height - buttonSize - 20 - playerHeight;
+                
+                // Update mobile detection on window resize (like when rotating device)
+                isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || p.windowWidth <= 768;
             };
         };
 
