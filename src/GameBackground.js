@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 
-const GameBackground = () => {
+const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
     const sketchRef = useRef(null);
 
     useEffect(() => {
@@ -25,7 +25,6 @@ const GameBackground = () => {
             let enemyDirection = 1;
             let enemySpeed = 2;
             let buttonSize = 60;
-            let isGameOver = false;
             let gameOverTimer = 0;
             let playerHitEffect = 0;
             let explosions = [];
@@ -40,16 +39,40 @@ const GameBackground = () => {
             let alienHeads = []; // Array to track alien heads
             let alienSpawnTimer = 180; // Spawn a new alien head every 3 seconds
             let isMobileDevice = false; // Flag to track if it's a mobile device
+            let scaleFactor = 1; // Scale factor for resizing elements on mobile
+            let playerDying = false; // Flag to track if player is in dying animation
 
             p.setup = () => {
                 p.createCanvas(p.windowWidth, p.windowHeight).parent(sketchRef.current);
+                
+                // Detect if it's a mobile device
+                isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || p.windowWidth <= 768;
+                
+                // Set scale factor based on device type and screen size
+                if (isMobileDevice) {
+                    scaleFactor = p.min(0.7, p.windowWidth / 768);
+                    
+                    // Scale down game elements for mobile
+                    playerWidth *= scaleFactor;
+                    playerHeight *= scaleFactor;
+                    buttonSize = Math.max(45, buttonSize * scaleFactor); // Ensure buttons aren't too small
+                    
+                    // Also reduce game speed for mobile
+                    enemySpeed *= 0.7;
+                } else {
+                    scaleFactor = 1;
+                }
+                
                 playerX = p.width / 2;
                 playerY = p.height - buttonSize - 20 - playerHeight;
+                
                 for (let i = 0; i < 100; i++) {
+                    // Scale star speed for mobile devices
+                    const speedMultiplier = isMobileDevice ? 0.6 : 1;
                     stars.push({
                         x: p.random(p.width),
                         y: p.random(p.height),
-                        speedY: p.random(1, 3),
+                        speedY: p.random(1, 3) * speedMultiplier,
                         size: p.random(1, 3),
                     });
                 }
@@ -61,13 +84,7 @@ const GameBackground = () => {
                 
                 // Initialize alien heads array
                 alienHeads = [];
-                alienSpawnTimer = p.floor(p.random(60, 180));
-                
-                // Detect if it's a mobile device
-                isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || p.windowWidth <= 768;
-                
-                console.log("First powerup will appear in", Math.ceil(powerupSpawnTimer / 60), "seconds");
-                console.log("Is mobile device:", isMobileDevice);
+                alienSpawnTimer = p.floor(p.random(60, 180)); // Random time between 1-3 seconds
             };
 
             function spawnEnemies() {
@@ -76,7 +93,7 @@ const GameBackground = () => {
                     enemies.push({
                         x: p.width / 2 - 100 + i * 100,
                         y: 80,
-                        size: 40,
+                        size: 40 * scaleFactor, // Scale enemy size for mobile
                         shootTimer: p.floor(p.random(60, 120)),
                         type: p.floor(p.random(3))
                     });
@@ -86,7 +103,7 @@ const GameBackground = () => {
             function resetGame() {
                 lives = 3;
                 score = 0;
-                isGameOver = false;
+                gameOverTimer = 0;
                 playerBullets = [];
                 enemyBullets = [];
                 explosions = [];
@@ -100,6 +117,10 @@ const GameBackground = () => {
                     tripleShot: 0,
                     speedBoost: 0
                 };
+                playerDying = false; // Reset dying state
+                
+                // Reset game state using helper function
+                onSetGameOver(false);
                 spawnEnemies();
             }
 
@@ -107,6 +128,7 @@ const GameBackground = () => {
                 p.background(0);
                 drawStars();
                 
+                // Check for valid game state
                 if (isGameOver) {
                     drawGameOver();
                 } else {
@@ -126,21 +148,23 @@ const GameBackground = () => {
             };
             
             function drawGameOver() {
+                // Calculate text size based on device - smaller for mobile
+                const textSizeFactor = isMobileDevice ? 0.6 : 1;
+                
                 // White text with slight pulsing for visual emphasis
                 p.fill(255, 255, 255, 200 + p.sin(p.frameCount * 0.1) * 55);
-                p.textSize(70);
+                p.textSize(70 * textSizeFactor);
                 p.textAlign(p.CENTER, p.CENTER);
                 p.textStyle(p.BOLD);
                 p.text("GAME OVER", p.width / 2, p.height / 2);
                 
-                p.textSize(30);
+                p.textSize(30 * textSizeFactor);
                 p.textStyle(p.NORMAL);
-                p.text("Final Score: " + score, p.width / 2, p.height / 2 + 70);
+                p.text("Final Score: " + score, p.width / 2, p.height / 2 + 70 * textSizeFactor);
                 
                 gameOverTimer++;
                 if (gameOverTimer > 240) { // 4 seconds at 60 FPS
                     resetGame();
-                    gameOverTimer = 0;
                 }
             }
 
@@ -192,21 +216,21 @@ const GameBackground = () => {
                     
                     // Main flame
                     p.beginShape();
-                    p.vertex(playerX - 8, baseY);
-                    p.vertex(playerX - 15, baseY + 15 + p.sin(p.frameCount * 0.4) * 5);
-                    p.vertex(playerX, baseY + 40 + p.sin(p.frameCount * 0.5) * 8);
-                    p.vertex(playerX + 15, baseY + 15 + p.sin(p.frameCount * 0.4) * 5);
-                    p.vertex(playerX + 8, baseY);
+                    p.vertex(playerX - 8 * scaleFactor, baseY);
+                    p.vertex(playerX - 15 * scaleFactor, baseY + 15 * scaleFactor + p.sin(p.frameCount * 0.4) * 5 * scaleFactor);
+                    p.vertex(playerX, baseY + 40 * scaleFactor + p.sin(p.frameCount * 0.5) * 8 * scaleFactor);
+                    p.vertex(playerX + 15 * scaleFactor, baseY + 15 * scaleFactor + p.sin(p.frameCount * 0.4) * 5 * scaleFactor);
+                    p.vertex(playerX + 8 * scaleFactor, baseY);
                     p.endShape(p.CLOSE);
                     
                     // Inner flame (brighter)
                     p.fill(100, 255, 200, 200);
                     p.beginShape();
-                    p.vertex(playerX - 4, baseY);
-                    p.vertex(playerX - 8, baseY + 10 + p.sin(p.frameCount * 0.4) * 3);
-                    p.vertex(playerX, baseY + 25 + p.sin(p.frameCount * 0.5) * 5);
-                    p.vertex(playerX + 8, baseY + 10 + p.sin(p.frameCount * 0.4) * 3);
-                    p.vertex(playerX + 4, baseY);
+                    p.vertex(playerX - 4 * scaleFactor, baseY);
+                    p.vertex(playerX - 8 * scaleFactor, baseY + 10 * scaleFactor + p.sin(p.frameCount * 0.4) * 3 * scaleFactor);
+                    p.vertex(playerX, baseY + 25 * scaleFactor + p.sin(p.frameCount * 0.5) * 5 * scaleFactor);
+                    p.vertex(playerX + 8 * scaleFactor, baseY + 10 * scaleFactor + p.sin(p.frameCount * 0.4) * 3 * scaleFactor);
+                    p.vertex(playerX + 4 * scaleFactor, baseY);
                     p.endShape(p.CLOSE);
                 } else {
                     // Regular thruster
@@ -214,21 +238,21 @@ const GameBackground = () => {
                     
                     // Main flame
                     p.beginShape();
-                    p.vertex(playerX - 7, baseY);
-                    p.vertex(playerX - 10, baseY + 10 + p.sin(p.frameCount * 0.4) * 3);
-                    p.vertex(playerX, baseY + 25 + p.sin(p.frameCount * 0.5) * 5);
-                    p.vertex(playerX + 10, baseY + 10 + p.sin(p.frameCount * 0.4) * 3);
-                    p.vertex(playerX + 7, baseY);
+                    p.vertex(playerX - 7 * scaleFactor, baseY);
+                    p.vertex(playerX - 10 * scaleFactor, baseY + 10 * scaleFactor + p.sin(p.frameCount * 0.4) * 3 * scaleFactor);
+                    p.vertex(playerX, baseY + 25 * scaleFactor + p.sin(p.frameCount * 0.5) * 5 * scaleFactor);
+                    p.vertex(playerX + 10 * scaleFactor, baseY + 10 * scaleFactor + p.sin(p.frameCount * 0.4) * 3 * scaleFactor);
+                    p.vertex(playerX + 7 * scaleFactor, baseY);
                     p.endShape(p.CLOSE);
                     
                     // Inner flame (brighter)
                     p.fill(255, 150, 255, 200);
                     p.beginShape();
-                    p.vertex(playerX - 3, baseY);
-                    p.vertex(playerX - 5, baseY + 7 + p.sin(p.frameCount * 0.4) * 2);
-                    p.vertex(playerX, baseY + 15 + p.sin(p.frameCount * 0.5) * 3);
-                    p.vertex(playerX + 5, baseY + 7 + p.sin(p.frameCount * 0.4) * 2);
-                    p.vertex(playerX + 3, baseY);
+                    p.vertex(playerX - 3 * scaleFactor, baseY);
+                    p.vertex(playerX - 5 * scaleFactor, baseY + 7 * scaleFactor + p.sin(p.frameCount * 0.4) * 2 * scaleFactor);
+                    p.vertex(playerX, baseY + 15 * scaleFactor + p.sin(p.frameCount * 0.5) * 3 * scaleFactor);
+                    p.vertex(playerX + 5 * scaleFactor, baseY + 7 * scaleFactor + p.sin(p.frameCount * 0.4) * 2 * scaleFactor);
+                    p.vertex(playerX + 3 * scaleFactor, baseY);
                     p.endShape(p.CLOSE);
                 }
                 
@@ -236,14 +260,14 @@ const GameBackground = () => {
                 p.fill(255, 100, 255, 150 + p.sin(p.frameCount * 0.2) * 40);
                 p.beginShape(); // Left thruster
                 p.vertex(playerX - playerWidth*0.8, playerY + playerHeight*0.7);
-                p.vertex(playerX - playerWidth*0.9, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3);
-                p.vertex(playerX - playerWidth*0.7, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3);
+                p.vertex(playerX - playerWidth*0.9, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3 * scaleFactor);
+                p.vertex(playerX - playerWidth*0.7, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3 * scaleFactor);
                 p.endShape(p.CLOSE);
                 
                 p.beginShape(); // Right thruster
                 p.vertex(playerX + playerWidth*0.8, playerY + playerHeight*0.7);
-                p.vertex(playerX + playerWidth*0.9, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3);
-                p.vertex(playerX + playerWidth*0.7, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3);
+                p.vertex(playerX + playerWidth*0.9, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3 * scaleFactor);
+                p.vertex(playerX + playerWidth*0.7, playerY + playerHeight*0.8 + p.sin(p.frameCount * 0.3) * 3 * scaleFactor);
                 p.endShape(p.CLOSE);
                 
                 // Redesigned spaceship
@@ -506,11 +530,11 @@ const GameBackground = () => {
                 for (let bullet of playerBullets) {
                     // Glow effect
                     p.fill(255, 0, 255, 150); // Neon pink with alpha
-                    p.ellipse(bullet.x, bullet.y, 12, 12);
+                    p.ellipse(bullet.x, bullet.y, 12 * scaleFactor, 12 * scaleFactor);
                     
                     // Core
                     p.fill(255);
-                    p.ellipse(bullet.x, bullet.y, 6, 6);
+                    p.ellipse(bullet.x, bullet.y, 6 * scaleFactor, 6 * scaleFactor);
                 }
             }
 
@@ -519,20 +543,21 @@ const GameBackground = () => {
                 for (let bullet of enemyBullets) {
                     // Glow effect
                     p.fill(170, 0, 255, 150); // Neon purple with alpha
-                    p.ellipse(bullet.x, bullet.y, 10, 10);
+                    p.ellipse(bullet.x, bullet.y, 10 * scaleFactor, 10 * scaleFactor);
                     
                     // Core
                     p.fill(255);
-                    p.ellipse(bullet.x, bullet.y, 4, 4);
+                    p.ellipse(bullet.x, bullet.y, 4 * scaleFactor, 4 * scaleFactor);
                 }
             }
 
             function drawPowerups() {
-                // Removed the auto-spawn code that creates a powerup when none exist
-                
                 // Draw each powerup
                 for (let i = 0; i < powerups.length; i++) {
                     let powerup = powerups[i];
+                    
+                    // Get the appropriate scale factor
+                    const powerupScale = powerup.scale || scaleFactor;
                     
                     // Update rotation and pulse
                     powerup.rotation += 1;
@@ -541,9 +566,9 @@ const GameBackground = () => {
                     // Create trail particles
                     if (p.frameCount % 3 === 0) {
                         powerup.particles.push({
-                            x: powerup.x + p.random(-10, 10),
-                            y: powerup.y + p.random(-10, 10),
-                            size: p.random(5, 15),
+                            x: powerup.x + p.random(-10, 10) * powerupScale,
+                            y: powerup.y + p.random(-10, 10) * powerupScale,
+                            size: p.random(5, 15) * powerupScale,
                             alpha: 255,
                             life: 30
                         });
@@ -587,13 +612,13 @@ const GameBackground = () => {
                     p.translate(powerup.x, powerup.y);
                     p.rotate(p.radians(powerup.rotation));
                     
-                    // Pulsing size
-                    let pulseSize = 65 + Math.sin(powerup.pulse) * 10;
+                    // Pulsing size - scale for mobile
+                    let pulseSize = (65 + Math.sin(powerup.pulse) * 10) * powerupScale;
                     
                     // Outer glow
                     p.noFill();
                     for (let g = 0; g < 3; g++) {
-                        let glowSize = pulseSize + g * 5;
+                        let glowSize = pulseSize + g * 5 * powerupScale;
                         let alpha = 100 - g * 30;
                         switch (powerup.type) {
                             case 'shield':
@@ -609,89 +634,85 @@ const GameBackground = () => {
                                 p.stroke(255, 255, 255, alpha);
                                 break;
                         }
-                        p.strokeWeight(3);
+                        p.strokeWeight(3 * powerupScale);
                         p.ellipse(0, 0, glowSize, glowSize);
                     }
                     
-                    // Main powerup shape - changed to represent their function
+                    // Main powerup shape - changed to represent their function (and scale for mobile)
                     p.noStroke();
                     switch (powerup.type) {
                         case 'shield':
-                            // Simple shield shape
-                            // Main shield body
+                            // Shield shape
                             p.fill(130, 50, 240);
                             p.beginShape();
-                            p.vertex(0, -25);  // Top point
-                            p.vertex(20, -10); // Top right
-                            p.vertex(20, 15);  // Bottom right
-                            p.vertex(0, 25);   // Bottom point
-                            p.vertex(-20, 15); // Bottom left
-                            p.vertex(-20, -10); // Top left
+                            p.vertex(0, -25 * powerupScale);  // Top point
+                            p.vertex(20 * powerupScale, -10 * powerupScale); // Top right
+                            p.vertex(20 * powerupScale, 15 * powerupScale);  // Bottom right
+                            p.vertex(0, 25 * powerupScale);   // Bottom point
+                            p.vertex(-20 * powerupScale, 15 * powerupScale); // Bottom left
+                            p.vertex(-20 * powerupScale, -10 * powerupScale); // Top left
                             p.endShape(p.CLOSE);
                             
                             // Inner shield detail
                             p.fill(180, 100, 255);
                             p.beginShape();
-                            p.vertex(0, -15);  // Top point
-                            p.vertex(12, -5);  // Top right
-                            p.vertex(12, 10);  // Bottom right
-                            p.vertex(0, 18);   // Bottom point
-                            p.vertex(-12, 10); // Bottom left
-                            p.vertex(-12, -5); // Top left
+                            p.vertex(0, -15 * powerupScale);  // Top point
+                            p.vertex(12 * powerupScale, -5 * powerupScale);  // Top right
+                            p.vertex(12 * powerupScale, 10 * powerupScale);  // Bottom right
+                            p.vertex(0, 18 * powerupScale);   // Bottom point
+                            p.vertex(-12 * powerupScale, 10 * powerupScale); // Bottom left
+                            p.vertex(-12 * powerupScale, -5 * powerupScale); // Top left
                             p.endShape(p.CLOSE);
                             
                             // Center dot
                             p.fill(255);
-                            p.ellipse(0, 0, 8, 8);
+                            p.ellipse(0, 0, 8 * powerupScale, 8 * powerupScale);
                             break;
                             
                         case 'tripleShot':
                             // Pistol body
                             p.fill(220, 20, 120);
-                            p.rect(-15, -5, 30, 15); // Horizontal body
+                            p.rect(-15 * powerupScale, -5 * powerupScale, 30 * powerupScale, 15 * powerupScale); // Horizontal body
                             
                             // Handle
                             p.fill(180, 10, 100);
-                            p.rect(-10, 10, 10, 15); // Vertical handle
+                            p.rect(-10 * powerupScale, 10 * powerupScale, 10 * powerupScale, 15 * powerupScale); // Vertical handle
                             
                             // Three barrels
                             p.fill(180, 10, 100);
-                            // p.rect(10, -10, 15, 4);  // Top barrel
-                            p.rect(10, -2, 15, 4);   // Middle barrel
-                            // p.rect(10, 6, 15, 4);    // Bottom barrel
+                            p.rect(10 * powerupScale, -2 * powerupScale, 15 * powerupScale, 4 * powerupScale);   // Middle barrel
                             
                             // Muzzle details
                             p.fill(255);
-                            p.ellipse(25, -8, 3, 3); // Top muzzle
-                            p.ellipse(25, 0, 3, 3);  // Middle muzzle
-                            p.ellipse(25, 8, 3, 3);  // Bottom muzzle
+                            p.ellipse(25 * powerupScale, -8 * powerupScale, 3 * powerupScale, 3 * powerupScale); // Top muzzle
+                            p.ellipse(25 * powerupScale, 0, 3 * powerupScale, 3 * powerupScale);  // Middle muzzle
+                            p.ellipse(25 * powerupScale, 8 * powerupScale, 3 * powerupScale, 3 * powerupScale);  // Bottom muzzle
                             break;
                             
                         case 'speedBoost':
-                            // Simple rocket shape
                             // Rocket body
                             p.fill(220, 50, 220);
-                            p.rect(-8, -20, 16, 30, 5);
+                            p.rect(-8 * powerupScale, -20 * powerupScale, 16 * powerupScale, 30 * powerupScale, 5 * powerupScale);
                             
                             // Rocket nose
                             p.fill(255, 100, 255);
-                            p.triangle(-8, -20, 0, -30, 8, -20);
+                            p.triangle(-8 * powerupScale, -20 * powerupScale, 0, -30 * powerupScale, 8 * powerupScale, -20 * powerupScale);
                             
                             // Rocket fins
                             p.fill(255, 100, 255);
-                            p.triangle(-8, 10, -15, 20, -8, 5);  // Left fin
-                            p.triangle(8, 10, 15, 20, 8, 5);     // Right fin
+                            p.triangle(-8 * powerupScale, 10 * powerupScale, -15 * powerupScale, 20 * powerupScale, -8 * powerupScale, 5 * powerupScale);  // Left fin
+                            p.triangle(8 * powerupScale, 10 * powerupScale, 15 * powerupScale, 20 * powerupScale, 8 * powerupScale, 5 * powerupScale);     // Right fin
                             
                             // Rocket flame - animated
                             p.fill(255, 150, 50, 200 + Math.sin(p.frameCount * 0.3) * 55);
-                            p.triangle(-6, 10, 0, 25 + Math.sin(p.frameCount * 0.5) * 5, 6, 10);
+                            p.triangle(-6 * powerupScale, 10 * powerupScale, 0, (25 + Math.sin(p.frameCount * 0.5) * 5) * powerupScale, 6 * powerupScale, 10 * powerupScale);
                             p.fill(255, 255, 100, 150 + Math.sin(p.frameCount * 0.3) * 55);
-                            p.triangle(-3, 10, 0, 18 + Math.sin(p.frameCount * 0.5) * 3, 3, 10);
+                            p.triangle(-3 * powerupScale, 10 * powerupScale, 0, (18 + Math.sin(p.frameCount * 0.5) * 3) * powerupScale, 3 * powerupScale, 10 * powerupScale);
                             break;
                         default:
                             // Default shape (circle)
                             p.fill(255);
-                            p.ellipse(0, 0, 30, 30);
+                            p.ellipse(0, 0, 30 * powerupScale, 30 * powerupScale);
                             break;
                     }
                     
@@ -751,26 +772,28 @@ const GameBackground = () => {
             }
 
             function drawUI() {
+                const textSizeFactor = isMobileDevice ? 0.75 : 1;
+                
                 p.fill(255);
-                p.textSize(16);
+                p.textSize(16 * textSizeFactor);
                 p.textAlign(p.LEFT);
-                p.text("Score: " + score, 10, 20);
-                p.text("Lives: " + lives, 10, 40);
+                p.text("Score: " + score, 10, 20 * textSizeFactor);
+                p.text("Lives: " + lives, 10, 40 * textSizeFactor);
                 
                 // Draw active powerups
-                let yPos = 70;
+                let yPos = 70 * textSizeFactor;
                 p.textAlign(p.LEFT);
                 
                 if (activePowerups.shield > 0) {
                     p.fill(0, 200, 255);
                     p.text("🛡️ Shield: " + Math.ceil(activePowerups.shield / 60) + "s", 10, yPos);
-                    yPos += 25;
+                    yPos += 25 * textSizeFactor;
                 }
                 
                 if (activePowerups.tripleShot > 0) {
                     p.fill(255, 50, 50);
                     p.text("🔥 Triple Shot: " + Math.ceil(activePowerups.tripleShot / 60) + "s", 10, yPos);
-                    yPos += 25;
+                    yPos += 25 * textSizeFactor;
                 }
                 
                 if (activePowerups.speedBoost > 0) {
@@ -810,9 +833,9 @@ const GameBackground = () => {
                 p.fill(0, 200, 255);
                 p.noStroke();
                 p.triangle(
-                    leftButtonX - 15, buttonY,
-                    leftButtonX + 5, buttonY - 20,
-                    leftButtonX + 5, buttonY + 20
+                    leftButtonX - 15 * scaleFactor, buttonY,
+                    leftButtonX + 5 * scaleFactor, buttonY - 20 * scaleFactor,
+                    leftButtonX + 5 * scaleFactor, buttonY + 20 * scaleFactor
                 );
                 
                 // Right button with neon styling
@@ -836,9 +859,9 @@ const GameBackground = () => {
                 p.fill(0, 200, 255);
                 p.noStroke();
                 p.triangle(
-                    rightButtonX + 15, buttonY,
-                    rightButtonX - 5, buttonY - 20,
-                    rightButtonX - 5, buttonY + 20
+                    rightButtonX + 15 * scaleFactor, buttonY,
+                    rightButtonX - 5 * scaleFactor, buttonY - 20 * scaleFactor,
+                    rightButtonX - 5 * scaleFactor, buttonY + 20 * scaleFactor
                 );
                 
                 // Shoot button with neon styling - make it more pink/purple to stand out
@@ -855,7 +878,7 @@ const GameBackground = () => {
                 // Pulsing effect for the shoot button
                 const pulseSize = buttonSize * (1 + 0.05 * Math.sin(p.frameCount * 0.1));
                 p.noFill();
-                p.strokeWeight(3);
+                p.strokeWeight(2);
                 p.stroke(255, 50, 255);
                 p.ellipse(shootButtonX, buttonY, pulseSize, pulseSize);
                 
@@ -891,21 +914,26 @@ const GameBackground = () => {
                     shoot = p.keyIsDown(32) || p.keyIsDown(87); // Spacebar or 'W'
                 }
                 
-                // Speed boost powerup affects movement speed
-                const moveSpeed = activePowerups.speedBoost > 0 ? 12 : 7;
+                // Scale movement speed based on device
+                const baseSpeed = activePowerups.speedBoost > 0 ? 12 : 7;
+                const moveSpeed = isMobileDevice ? baseSpeed * 0.7 : baseSpeed;
                 
                 if (moveLeft) playerX -= moveSpeed;
                 if (moveRight) playerX += moveSpeed;
                 playerX = p.constrain(playerX, playerWidth / 2, p.width - playerWidth / 2);
                 
                 if (shoot && shootCooldown <= 0) {
+                    // Scale bullet speed for mobile
+                    const bulletSpeedMultiplier = isMobileDevice ? 0.7 : 1;
+                    const bulletSpeed = -15 * bulletSpeedMultiplier;
+                    
                     // Normal shot
-                    playerBullets.push({ x: playerX, y: playerY - 15, speed: -15 });
+                    playerBullets.push({ x: playerX, y: playerY - 15, speed: bulletSpeed });
                     
                     // Triple shot powerup
                     if (activePowerups.tripleShot > 0) {
-                        playerBullets.push({ x: playerX - 15, y: playerY, speed: -15 });
-                        playerBullets.push({ x: playerX + 15, y: playerY, speed: -15 });
+                        playerBullets.push({ x: playerX - 15, y: playerY, speed: bulletSpeed });
+                        playerBullets.push({ x: playerX + 15, y: playerY, speed: bulletSpeed });
                     }
                     
                     shootCooldown = 10;
@@ -942,7 +970,7 @@ const GameBackground = () => {
             }
 
             function updateGame() {
-                if (isGameOver) return;
+                if (isGameOver || playerDying) return; // Don't update if game is over or player is dying
                 
                 // Update active powerups timers
                 for (let type in activePowerups) {
@@ -957,7 +985,6 @@ const GameBackground = () => {
                     const types = ['shield', 'tripleShot', 'speedBoost'];
                     const type = types[Math.floor(p.random(types.length))];
                     createPowerup(type, p.random(100, p.width - 100), -50);
-                    console.log("Timer spawned new powerup:", type);
                     powerupSpawnTimer = 900; // Reset to 15 seconds (changed from 300)
                 }
                 
@@ -965,20 +992,24 @@ const GameBackground = () => {
                 alienSpawnTimer--;
                 if (alienSpawnTimer <= 0) {
                     spawnAlienHead();
-                    alienSpawnTimer = p.floor(p.random(120, 300)); // Random time between 2-5 seconds
+                    // Slower spawn rate on mobile
+                    const spawnTimeBase = isMobileDevice ? 150 : 120;
+                    alienSpawnTimer = p.floor(p.random(spawnTimeBase, spawnTimeBase + 180)); // Random time between 2-5 seconds
                 }
                 
                 // Update alien heads
                 for (let i = alienHeads.length - 1; i >= 0; i--) {
                     let alien = alienHeads[i];
                     
-                    // Update position with randomized movement
-                    alien.x += Math.sin(p.frameCount * 0.05 + alien.id) * 3;
+                    // Update position with randomized movement - scaled for mobile
+                    const waveFactor = isMobileDevice ? 1.5 : 3; // Less horizontal movement on mobile
+                    alien.x += Math.sin(p.frameCount * 0.05 + alien.id) * waveFactor;
                     alien.y += alien.speedY;
                     
                     // Occasionally change Y speed for more unpredictable movement
                     if (p.frameCount % 30 === 0 && p.random() > 0.7) {
-                        alien.speedY = p.random(2, 5);
+                        const speedMultiplier = isMobileDevice ? 0.7 : 1;
+                        alien.speedY = p.random(2, 5) * speedMultiplier;
                     }
                     
                     // Check for collision with player
@@ -1013,17 +1044,8 @@ const GameBackground = () => {
                             lives--;
                             
                             if (lives <= 0) {
-                                // Create big explosion for player death
-                                for (let j = 0; j < 5; j++) {
-                                    explosions.push({
-                                        x: playerX + p.random(-playerWidth, playerWidth),
-                                        y: playerY + p.random(-playerHeight, playerHeight),
-                                        size: 70 + p.random(20),
-                                        frame: p.random(5)
-                                    });
-                                }
-                                
-                                isGameOver = true;
+                                // Create player death explosions but don't set game over yet
+                                createPlayerDeathExplosions();
                             }
                         }
                         
@@ -1039,15 +1061,15 @@ const GameBackground = () => {
                 // Move powerups down the screen
                 for (let i = powerups.length - 1; i >= 0; i--) {
                     let powerup = powerups[i];
-                    powerup.y += powerup.speed; // Faster, varying speeds
+                    powerup.y += powerup.speed;
                     
-                    // Add slight horizontal wobble
-                    powerup.x += Math.sin(p.frameCount * 0.05 + i) * 1.5;
+                    // Add slight horizontal wobble - scaled for mobile
+                    const wobbleFactor = isMobileDevice ? 0.8 : 1.5;
+                    powerup.x += Math.sin(p.frameCount * 0.05 + i) * wobbleFactor;
                     
                     // Remove if offscreen
                     if (powerup.y > p.height + 50) {
                         powerups.splice(i, 1);
-                        console.log("Powerup went offscreen, removed");
                     }
                 }
                 
@@ -1069,7 +1091,6 @@ const GameBackground = () => {
                     };
                     
                     if (rectanglesOverlap(playerHitBox, powerupBB)) {
-                        console.log("Powerup collected:", powerup.type);
                         
                         // Apply powerup effect
                         activePowerups[powerup.type] = 600; // 10 seconds
@@ -1104,7 +1125,7 @@ const GameBackground = () => {
                     }
                 }
                 
-                // Regular game updates
+                // Move bullets - already scaled via the speed property
                 for (let bullet of playerBullets) {
                     bullet.y += bullet.speed;
                 }
@@ -1115,6 +1136,7 @@ const GameBackground = () => {
                 }
                 enemyBullets = enemyBullets.filter(b => b.y < p.height + 10);
                 
+                // Scale enemy movement and shooting
                 let shouldReverse = false;
                 for (let enemy of enemies) {
                     enemy.x += enemyDirection * enemySpeed;
@@ -1124,8 +1146,17 @@ const GameBackground = () => {
                     if (enemy.shootTimer > 0) {
                         enemy.shootTimer--;
                     } else {
-                        enemyBullets.push({ x: enemy.x, y: enemy.y + enemy.size / 2, speed: 5 });
-                        enemy.shootTimer = p.floor(p.random(60, 120));
+                        // Scale enemy bullet speed for mobile
+                        const bulletSpeedMultiplier = isMobileDevice ? 0.7 : 1;
+                        enemyBullets.push({ 
+                            x: enemy.x, 
+                            y: enemy.y + enemy.size / 2, 
+                            speed: 5 * bulletSpeedMultiplier 
+                        });
+                        
+                        // Slower firing rate on mobile
+                        const shootTimerBase = isMobileDevice ? 70 : 60;
+                        enemy.shootTimer = p.floor(p.random(shootTimerBase, shootTimerBase + 60));
                     }
                 }
                 if (shouldReverse) {
@@ -1217,7 +1248,7 @@ const GameBackground = () => {
                     if (mainBodyHit || leftWingHit || rightWingHit) {
                         enemyBullets.splice(i, 1);
                         
-                        // Create hit explosion - this is what we need to match for alien collisions
+                        // Create hit explosion
                         explosions.push({
                             x: bullet.x,
                             y: bullet.y,
@@ -1236,17 +1267,8 @@ const GameBackground = () => {
                         
                         lives--;
                         if (lives <= 0) {
-                            // Create big explosion for player death
-                            for (let i = 0; i < 5; i++) {
-                                explosions.push({
-                                    x: playerX + p.random(-playerWidth, playerWidth),
-                                    y: playerY + p.random(-playerHeight, playerHeight),
-                                    size: 70 + p.random(20),
-                                    frame: p.random(5)
-                                });
-                            }
-                            
-                            isGameOver = true;
+                            // Create player death explosions but don't set game over yet
+                            createPlayerDeathExplosions();
                         }
                     }
                 }
@@ -1272,8 +1294,15 @@ const GameBackground = () => {
             }
 
             function drawExplosions() {
+                let deathExplosionsPresent = false;
+                
                 for (let i = explosions.length - 1; i >= 0; i--) {
                     let exp = explosions[i];
+                    
+                    // Track if any death explosions still exist
+                    if (exp.isDeathExplosion) {
+                        deathExplosionsPresent = true;
+                    }
                     
                     // Alien hit special effect
                     if (exp.type === 'alien') {
@@ -1422,9 +1451,20 @@ const GameBackground = () => {
                         
                         // Remove old explosions
                         if (exp.frame > 30) {
-                            explosions.splice(i, 1);
+                            // If this was a death explosion, check if it was the last one
+                            if (exp.isDeathExplosion) {
+                                explosions.splice(i, 1);
+                            } else {
+                                explosions.splice(i, 1);
+                            }
                         }
                     }
+                }
+                
+                // If player is dying and all death explosions are gone, trigger game over
+                if (playerDying && !deathExplosionsPresent) {
+                    playerDying = false; // Reset dying state
+                    onSetGameOver(true);
                 }
                 
                 // Draw power gain effects
@@ -1439,27 +1479,33 @@ const GameBackground = () => {
             }
 
             function spawnAlienHead() {
+                // Scale speed for mobile
+                const speedMultiplier = isMobileDevice ? 0.7 : 1;
+                
                 alienHeads.push({
                     id: p.random(1000), // For unique movement patterns
                     x: p.random(100, p.width - 100),
                     y: -50,
-                    size: p.random(40, 60),
-                    speedY: p.random(2, 4),
+                    size: p.random(40, 60) * scaleFactor, // Scale size for mobile
+                    speedY: p.random(2, 4) * speedMultiplier,
                     pulseOffset: p.random(0, 10)
                 });
             }
 
             function createPowerup(type, x, y) {
+                // Scale speed for mobile
+                const speedMultiplier = isMobileDevice ? 0.6 : 1;
+                
                 powerups.push({
                     type: type,
                     x: x,
                     y: y,
-                    speed: p.random(3, 7),          // Faster, varying speeds
-                    rotation: p.random(0, 360),     // Starting rotation
-                    pulse: p.random(0, 100),        // For offset pulsing effect
-                    particles: []                   // Trailing particles
+                    speed: p.random(3, 7) * speedMultiplier,
+                    rotation: p.random(0, 360),
+                    pulse: p.random(0, 100),
+                    particles: [],
+                    scale: scaleFactor * (isMobileDevice ? 0.7 : 1) // Extra scaling for mobile
                 });
-                console.log("Created powerup:", type, "at", x, y);
             }
             
             function createAlienHitEffect(x, y) {
@@ -1531,13 +1577,62 @@ const GameBackground = () => {
                 }
             }
 
+            function createPlayerDeathExplosions() {
+                playerDying = true; // Set dying state
+                
+                // Create multiple explosions for player death
+                for (let i = 0; i < 5; i++) {
+                    explosions.push({
+                        x: playerX + p.random(-playerWidth, playerWidth),
+                        y: playerY + p.random(-playerHeight, playerHeight),
+                        size: 70 + p.random(20),
+                        frame: 0,
+                        isDeathExplosion: true // Mark as death explosion
+                    });
+                }
+            }
+
             p.windowResized = () => {
                 p.resizeCanvas(p.windowWidth, p.windowHeight);
-                playerX = p.width / 2;
-                playerY = p.height - buttonSize - 20 - playerHeight;
                 
                 // Update mobile detection on window resize (like when rotating device)
                 isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || p.windowWidth <= 768;
+                
+                // Recalculate scale factor
+                if (isMobileDevice) {
+                    let newScaleFactor = p.min(0.7, p.windowWidth / 768);
+                    
+                    // If scale factor has changed significantly, we need to rescale all game elements
+                    if (Math.abs(newScaleFactor - scaleFactor) > 0.05) {
+                        // Adjust sizes proportionally to the change in scale factor
+                        let sizeRatio = newScaleFactor / scaleFactor;
+                        
+                        // Rescale player
+                        playerWidth *= sizeRatio;
+                        playerHeight *= sizeRatio;
+                        
+                        // Rescale enemies
+                        for (let enemy of enemies) {
+                            enemy.size *= sizeRatio;
+                        }
+                        
+                        // Rescale alien heads
+                        for (let alien of alienHeads) {
+                            alien.size *= sizeRatio;
+                        }
+                        
+                        // Update button size
+                        buttonSize = Math.max(45, buttonSize * sizeRatio);
+                        
+                        // Update the global scale factor
+                        scaleFactor = newScaleFactor;
+                    }
+                } else {
+                    scaleFactor = 1;
+                }
+                
+                playerX = p.width / 2;
+                playerY = p.height - buttonSize - 20 - playerHeight;
             };
         };
 
@@ -1545,7 +1640,7 @@ const GameBackground = () => {
         return () => {
             p5Instance.remove();
         };
-    }, []);
+    }, [isGameOver, onSetGameOver]);
 
     return <div ref={sketchRef} style={{ position: 'absolute', inset: 0, zIndex: 0 }} />;
 };
