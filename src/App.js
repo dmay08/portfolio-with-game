@@ -23,7 +23,7 @@ const Content = styled.div`
   @media (max-width: 768px) {
     padding: 1.5rem;
     justify-content: flex-end;
-    padding-bottom: 9rem; /* Space for game buttons */
+    padding-bottom: 10rem; /* Space for game buttons */
   }
 `;
 
