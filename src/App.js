@@ -85,7 +85,7 @@ const Button = styled.button`
 `;
 
 function App() {
- 
+
   const [isGameOver, setIsGameOver] = useState(false);
 
   return (
@@ -100,9 +100,10 @@ function App() {
           <HeroSection className="hero-section">
             <Heading className="hero-heading">Hello,<br />I'm Danny</Heading>
             <Description className="hero-description">Lead Frontend Developer <br />at Lightstorm Entertainment</Description>
-            <Button className="projects-button">
-              View Projects
-            </Button>
+            {/* <Button className="projects-button">
+               View Projects
+             </Button>
+            */}
           </HeroSection>
         )}
       </Content>
