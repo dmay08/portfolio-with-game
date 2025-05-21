@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react';
 
 const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
     const sketchRef = useRef(null);
+    const scoreRef = useRef(0);
 
     useEffect(() => {
         // Make sure p5 is available globally
@@ -20,7 +21,6 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
             let playerBullets = [];
             let enemyBullets = [];
             let lives = 3;
-            let score = 0;
             let shootCooldown = 0;
             let enemyDirection = 1;
             let enemySpeed = 2;
@@ -29,7 +29,7 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
             let playerHitEffect = 0;
             let explosions = [];
             let powerups = [];
-            let powerupSpawnTimer = 900; // Changed from 300 (5 seconds) to 900 (15 seconds at 60fps)
+            let powerupSpawnTimer = 900;
             let activePowerups = {
                 shield: 0,
                 tripleShot: 0,
@@ -100,9 +100,10 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
                 }
             }
             
+            // Runs after Game Over screen is shown for 4 seconds
             function resetGame() {
                 lives = 3;
-                score = 0;
+                scoreRef.current = 0;
                 gameOverTimer = 0;
                 playerBullets = [];
                 enemyBullets = [];
@@ -160,7 +161,7 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
                 
                 p.textSize(30 * textSizeFactor);
                 p.textStyle(p.NORMAL);
-                p.text("Final Score: " + score, p.width / 2, p.height / 2 + 70 * textSizeFactor);
+                p.text("Final Score: " + scoreRef.current, p.width / 2, p.height / 2 + 70 * textSizeFactor);
                 
                 gameOverTimer++;
                 if (gameOverTimer > 240) { // 4 seconds at 60 FPS
@@ -777,7 +778,7 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
                 p.fill(255);
                 p.textSize(16 * textSizeFactor);
                 p.textAlign(p.LEFT);
-                p.text("Score: " + score, 10, 20 * textSizeFactor);
+                p.text("Score: " + scoreRef.current, 10, 20 * textSizeFactor);
                 p.text("Lives: " + lives, 10, 40 * textSizeFactor);
                 
                 // Draw active powerups
@@ -1119,9 +1120,6 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
                         
                         // Remove collected powerup
                         powerups.splice(i, 1);
-                        
-                        // Add score
-                        score += 5;
                     }
                 }
                 
@@ -1184,8 +1182,8 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
                             // Create alien hit effect
                             createAlienHitEffect(alien.x, alien.y);
                             
-                            // Add score
-                            score += 15;
+                            // Add score - directly update the ref
+                            scoreRef.current += 15;
                             break;
                         }
                     }
@@ -1211,7 +1209,8 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
                             createEnemyNeonHitEffect(bullet.x, bullet.y);
                             
                             enemies.splice(j, 1);
-                            score += 10;
+                            // Add score - directly update the ref
+                            scoreRef.current += 10;
                             
                             // Create neon hit effect at enemy center
                             createEnemyNeonHitEffect(enemy.x, enemy.y);
@@ -1460,7 +1459,7 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
                         }
                     }
                 }
-                
+
                 // If player is dying and all death explosions are gone, trigger game over
                 if (playerDying && !deathExplosionsPresent) {
                     playerDying = false; // Reset dying state
@@ -1635,12 +1634,11 @@ const GameBackground = ({ isGameOver = false, onSetGameOver = () => {} }) => {
                 playerY = p.height - buttonSize - 20 - playerHeight;
             };
         };
-
         const p5Instance = new window.p5(sketch);
         return () => {
             p5Instance.remove();
         };
-    }, [isGameOver, onSetGameOver]);
+    }, [isGameOver]);
 
     return <div ref={sketchRef} style={{ position: 'absolute', inset: 0, zIndex: 0 }} />;
 };
